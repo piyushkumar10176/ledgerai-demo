@@ -13,7 +13,7 @@ export default async function Nav() {
             <span className="text-xs font-normal text-slate-400">UK · demo</span>
           </Link>
           <Link href="/dashboard" className="text-sm text-slate-600 hover:text-slate-900">
-            Clients
+            Control tower
           </Link>
         </div>
         <div className="flex items-center gap-4 text-sm">

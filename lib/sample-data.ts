@@ -30,6 +30,7 @@ interface SampleClient {
   purchases: Purchase[];
   receipts: string[];
   vatPeriod: { start: string; end: string };
+  submitVat?: boolean; // false => stays "ready to file" (amber) in the control tower
 }
 
 const SAMPLES: SampleClient[] = [
@@ -79,6 +80,7 @@ const SAMPLES: SampleClient[] = [
     ],
     receipts: ["cafe"],
     vatPeriod: { start: "2026-04-01", end: "2026-06-30" },
+    submitVat: false, // leave unfiled -> shows as "ready to file" in the control tower
   },
 ];
 
@@ -149,6 +151,7 @@ export async function seedSampleData(firmId: number): Promise<void> {
         `sample-${spec.receipts[i]}-${i}.jpg`,
         spec.receipts[i],
       );
-    await submitVatReturn(firmId, client.id, spec.vatPeriod.start, spec.vatPeriod.end);
+    if (spec.submitVat !== false)
+      await submitVatReturn(firmId, client.id, spec.vatPeriod.start, spec.vatPeriod.end);
   }
 }

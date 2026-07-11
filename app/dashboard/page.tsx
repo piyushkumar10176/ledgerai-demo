@@ -1,21 +1,34 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
-import { listClients } from "@/lib/data";
+import { firmObligations } from "@/lib/obligations";
 import AddClientForm from "@/components/AddClientForm";
+import ControlTower from "@/components/ControlTower";
+
+// Demo VAT quarter: 1 Apr – 30 Jun 2026, standard deadline 7 Aug 2026.
+const PERIOD_START = "2026-04-01";
+const PERIOD_END = "2026-06-30";
+const DUE_DATE = "2026-08-07";
+
+function daysUntil(iso: string): number {
+  const due = new Date(iso + "T00:00:00Z").getTime();
+  const now = Date.now();
+  return Math.ceil((due - now) / (1000 * 60 * 60 * 24));
+}
 
 export default async function Dashboard() {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const clients = await listClients(session.firmId);
+  const obligations = await firmObligations(session.firmId, PERIOD_START, PERIOD_END);
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Clients</h1>
-          <p className="text-sm text-slate-500">Demo Accountants</p>
+          <h1 className="text-2xl font-bold tracking-tight">Obligations control tower</h1>
+          <p className="text-sm text-slate-500">
+            Demo Accountants · who&apos;s filed, who&apos;s not, at a glance
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <form action="/api/dev/seed-samples" method="post">
@@ -38,41 +51,17 @@ export default async function Dashboard() {
         </div>
       </div>
 
-      <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-            <tr>
-              <th className="px-5 py-3">Client</th>
-              <th className="px-5 py-3">Company no.</th>
-              <th className="px-5 py-3">VAT no.</th>
-              <th className="px-5 py-3"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {clients.map((c) => (
-              <tr key={c.id} className="hover:bg-slate-50">
-                <td className="px-5 py-3 font-medium">{c.name}</td>
-                <td className="px-5 py-3 text-slate-500">{c.company_number ?? "—"}</td>
-                <td className="px-5 py-3 text-slate-500">{c.vat_number ?? "—"}</td>
-                <td className="px-5 py-3 text-right">
-                  <Link
-                    href={`/clients/${c.id}`}
-                    className="text-indigo-600 hover:underline"
-                  >
-                    Open →
-                  </Link>
-                </td>
-              </tr>
-            ))}
-            {clients.length === 0 && (
-              <tr>
-                <td colSpan={4} className="px-5 py-8 text-center text-slate-400">
-                  No clients yet — add one to begin.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      <div className="mt-6">
+        <ControlTower
+          obligations={obligations}
+          period={{
+            label: "Q1 2026/27",
+            start: PERIOD_START,
+            end: PERIOD_END,
+            due: DUE_DATE,
+            daysLeft: daysUntil(DUE_DATE),
+          }}
+        />
       </div>
     </main>
   );
