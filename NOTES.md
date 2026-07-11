@@ -98,7 +98,12 @@ Verified working: Next.js 16.2.10 dev server, page renders at http://localhost:3
 Box 1 £1,300.00 · Box 4 £218.00 · **Box 5 (net VAT payable) £1,082.00** · Box 6 £6,500.00 · Box 7 £2,290.00. (Verified against the deterministic engine.)
 
 ## Hosting: Vercel + Turso
+**Live link:** https://ledger-uk.vercel.app · login `demo@ledgerai.test` / `demo1234`
+
 The app is deployed on Vercel with a Turso (libSQL) database.
+- Vercel project: `ledger-uk` · Turso DB: `ledgerai` (aws-eu-west-1).
+- Redeploy after code changes: `vercel deploy --prod --yes` (or connect the GitHub
+  repo in the Vercel dashboard for auto-deploy on push to `main`).
 
 - **Data layer:** `@libsql/client` (async). Local dev uses a file DB
   (`data/ledgerai.db`); production reads `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN`.
