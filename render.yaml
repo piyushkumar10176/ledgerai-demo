@@ -1,0 +1,16 @@
+# Render Blueprint — deploys LedgerAI UK demo as a free web service.
+# In Render: New + → Blueprint → connect this repo → Apply.
+# The service name below becomes the URL: https://ledger-uk.onrender.com
+services:
+  - type: web
+    name: ledger-uk
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_VERSION
+        value: "22.11.0"
+      - key: SESSION_SECRET
+        generateValue: true
