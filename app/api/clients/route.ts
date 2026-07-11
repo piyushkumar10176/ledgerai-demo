@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
   if (!name || !name.trim())
     return NextResponse.json({ error: "Name required" }, { status: 400 });
 
-  const id = createClient(
+  const id = await createClient(
     session.firmId,
     name,
     companyNumber || null,

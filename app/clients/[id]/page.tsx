@@ -14,12 +14,12 @@ export default async function ClientOverview({
   if (!session) redirect("/login");
   const { id } = await params;
   const clientId = Number(id);
-  const client = getClient(session.firmId, clientId);
+  const client = await getClient(session.firmId, clientId);
   if (!client) notFound();
 
-  const tb = trialBalance(clientId);
-  const entries = listJournalEntries(clientId, 20);
-  const accounts = listAccounts(clientId);
+  const tb = await trialBalance(clientId);
+  const entries = await listJournalEntries(clientId, 20);
+  const accounts = await listAccounts(clientId);
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">

@@ -1,28 +1,25 @@
-import { getDb } from "./db";
+import { one, run } from "./db";
 import { seedChartOfAccounts } from "./coa";
 import { postEntry } from "./ledger";
 import { splitGross } from "./money";
 import { processReceipt } from "./receipts";
 import { submitVatReturn } from "./vat-submit";
 
-// ============================================================================
-// SAMPLE DATA for review/demo. Creates a few extra clients, each pre-populated
-// with a realistic ledger, receipts (incl. a review-queue item) and a submitted
-// VAT return, so anyone opening the app sees a populated product. Idempotent:
-// clients are only created once, and a client is only populated if it has no
-// journal entries yet (so it survives the "Reset demo data" button).
-// ============================================================================
+// Sample data for review/demo: a few extra clients each pre-populated with a
+// ledger, receipts (incl. a review-queue item) and a submitted VAT return.
+// Idempotent: clients created once; a client is only populated if it has no
+// journal entries yet (survives the "Reset demo data" button).
 
 interface Sale {
   date: string;
   desc: string;
-  gross: number; // pennies
+  gross: number;
 }
 interface Purchase {
   date: string;
   desc: string;
   code: string;
-  gross: number; // pennies
+  gross: number;
   vat: "standard" | "none";
 }
 interface SampleClient {
@@ -31,7 +28,7 @@ interface SampleClient {
   vatNumber: string;
   sales: Sale[];
   purchases: Purchase[];
-  receipts: string[]; // ocr-mock scenario keys
+  receipts: string[];
   vatPeriod: { start: string; end: string };
 }
 
@@ -50,7 +47,7 @@ const SAMPLES: SampleClient[] = [
       { date: "2026-04-12", desc: "Van fuel", code: "6200", gross: 12000, vat: "standard" },
       { date: "2026-05-01", desc: "Yard rent", code: "6100", gross: 60000, vat: "none" },
     ],
-    receipts: ["fuel", "misc"], // misc = low confidence -> review queue
+    receipts: ["fuel", "misc"],
     vatPeriod: { start: "2026-04-01", end: "2026-06-30" },
   },
   {
@@ -67,29 +64,27 @@ const SAMPLES: SampleClient[] = [
       { date: "2026-04-22", desc: "Shopfront utilities", code: "6400", gross: 21600, vat: "standard" },
       { date: "2026-05-02", desc: "Store rent", code: "6100", gross: 150000, vat: "none" },
     ],
-    receipts: ["office"], // high confidence -> auto-post
+    receipts: ["office"],
     vatPeriod: { start: "2026-04-01", end: "2026-06-30" },
   },
   {
     name: "Cloudpeak Consulting Ltd",
     companyNumber: "33445566",
     vatNumber: "GB444555666",
-    sales: [
-      { date: "2026-04-14", desc: "Advisory retainer — Q1", gross: 420000 },
-    ],
+    sales: [{ date: "2026-04-14", desc: "Advisory retainer — Q1", gross: 420000 }],
     purchases: [
       { date: "2026-04-09", desc: "Cloud hosting", code: "6400", gross: 72000, vat: "standard" },
       { date: "2026-04-18", desc: "Subcontractor — design", code: "6300", gross: 180000, vat: "standard" },
       { date: "2026-05-05", desc: "Office rent", code: "6100", gross: 90000, vat: "none" },
     ],
-    receipts: ["cafe"], // low confidence -> review queue
+    receipts: ["cafe"],
     vatPeriod: { start: "2026-04-01", end: "2026-06-30" },
   },
 ];
 
-function postSale(firmId: number, clientId: number, s: Sale) {
+function postSale(firmId: number, clientId: number, s: Sale): Promise<number> {
   const { net, vat } = splitGross(s.gross);
-  postEntry({
+  return postEntry({
     firmId,
     clientId,
     date: s.date,
@@ -103,9 +98,13 @@ function postSale(firmId: number, clientId: number, s: Sale) {
   });
 }
 
-function postPurchase(firmId: number, clientId: number, p: Purchase) {
+function postPurchase(
+  firmId: number,
+  clientId: number,
+  p: Purchase,
+): Promise<number> {
   const split = p.vat === "standard" ? splitGross(p.gross) : { net: p.gross, vat: 0 };
-  postEntry({
+  return postEntry({
     firmId,
     clientId,
     date: p.date,
@@ -119,35 +118,37 @@ function postPurchase(firmId: number, clientId: number, p: Purchase) {
   });
 }
 
-// Create the sample clients (idempotent) and populate any that are empty.
-export function seedSampleData(firmId: number): void {
-  const db = getDb();
+export async function seedSampleData(firmId: number): Promise<void> {
   for (const spec of SAMPLES) {
-    let client = db
-      .prepare(`SELECT id FROM clients WHERE firm_id = ? AND name = ?`)
-      .get(firmId, spec.name) as { id: number } | undefined;
+    let client = await one<{ id: number }>(
+      `SELECT id FROM clients WHERE firm_id = ? AND name = ?`,
+      [firmId, spec.name],
+    );
     if (!client) {
-      const r = db
-        .prepare(
-          `INSERT INTO clients (firm_id, name, company_number, vat_number)
-           VALUES (?, ?, ?, ?)`,
-        )
-        .run(firmId, spec.name, spec.companyNumber, spec.vatNumber);
-      client = { id: Number(r.lastInsertRowid) };
-      seedChartOfAccounts(firmId, client.id);
+      const r = await run(
+        `INSERT INTO clients (firm_id, name, company_number, vat_number)
+         VALUES (?, ?, ?, ?)`,
+        [firmId, spec.name, spec.companyNumber, spec.vatNumber],
+      );
+      client = { id: r.lastId };
+      await seedChartOfAccounts(firmId, client.id);
     }
 
-    // Only populate if this client has no postings yet.
-    const count = db
-      .prepare(`SELECT COUNT(*) AS n FROM journal_entries WHERE client_id = ?`)
-      .get(client.id) as { n: number };
-    if (count.n > 0) continue;
-
-    for (const s of spec.sales) postSale(firmId, client.id, s);
-    for (const p of spec.purchases) postPurchase(firmId, client.id, p);
-    spec.receipts.forEach((scenario, i) =>
-      processReceipt(firmId, client!.id, `sample-${scenario}-${i}.jpg`, scenario),
+    const count = await one<{ n: number }>(
+      `SELECT COUNT(*) AS n FROM journal_entries WHERE client_id = ?`,
+      [client.id],
     );
-    submitVatReturn(firmId, client.id, spec.vatPeriod.start, spec.vatPeriod.end);
+    if ((count?.n ?? 0) > 0) continue; // already populated
+
+    for (const s of spec.sales) await postSale(firmId, client.id, s);
+    for (const p of spec.purchases) await postPurchase(firmId, client.id, p);
+    for (let i = 0; i < spec.receipts.length; i++)
+      await processReceipt(
+        firmId,
+        client.id,
+        `sample-${spec.receipts[i]}-${i}.jpg`,
+        spec.receipts[i],
+      );
+    await submitVatReturn(firmId, client.id, spec.vatPeriod.start, spec.vatPeriod.end);
   }
 }

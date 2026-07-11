@@ -18,15 +18,15 @@ export default async function VatPage({
   if (!session) redirect("/login");
   const { id } = await params;
   const clientId = Number(id);
-  const client = getClient(session.firmId, clientId);
+  const client = await getClient(session.firmId, clientId);
   if (!client) notFound();
 
   const sp = await searchParams;
   const from = sp.from || "2026-04-01";
   const to = sp.to || "2026-06-30";
 
-  const vat = computeVatReturn(clientId, from, to);
-  const history = listVatReturns(clientId);
+  const vat = await computeVatReturn(clientId, from, to);
+  const history = await listVatReturns(clientId);
 
   const boxKeys = Object.keys(vat) as (keyof VatReturn)[];
   const highlight: (keyof VatReturn)[] = ["box3", "box5"];

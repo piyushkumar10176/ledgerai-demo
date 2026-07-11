@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { cookies } from "next/headers";
-import { getDb } from "./db";
+import { one } from "./db";
 
 // DEMO auth: hashed passwords (scrypt) + a signed session cookie (HMAC).
 // Simple by design — the FRD's real target is Keycloak. See NOTES.md.
@@ -50,19 +50,17 @@ function deserialize(token: string): Session | null {
   }
 }
 
-export function authenticate(email: string, password: string): Session | null {
-  const db = getDb();
-  const u = db
-    .prepare(`SELECT * FROM users WHERE email = ?`)
-    .get(email.trim().toLowerCase()) as
-    | {
-        id: number;
-        firm_id: number;
-        name: string;
-        email: string;
-        password_hash: string;
-      }
-    | undefined;
+export async function authenticate(
+  email: string,
+  password: string,
+): Promise<Session | null> {
+  const u = await one<{
+    id: number;
+    firm_id: number;
+    name: string;
+    email: string;
+    password_hash: string;
+  }>(`SELECT * FROM users WHERE email = ?`, [email.trim().toLowerCase()]);
   if (!u) return null;
   if (!verifyPassword(password, u.password_hash)) return null;
   return { userId: u.id, firmId: u.firm_id, name: u.name, email: u.email };

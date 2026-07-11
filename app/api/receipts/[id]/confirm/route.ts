@@ -12,7 +12,7 @@ export async function POST(
   const { id } = await params;
   const body = await req.json().catch(() => ({}));
   try {
-    const entryId = confirmReceipt(
+    const entryId = await confirmReceipt(
       session.firmId,
       Number(id),
       body.overrideCode || undefined,

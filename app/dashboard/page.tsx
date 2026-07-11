@@ -8,7 +8,7 @@ export default async function Dashboard() {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const clients = listClients(session.firmId);
+  const clients = await listClients(session.firmId);
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">

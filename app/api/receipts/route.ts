@@ -8,10 +8,10 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { clientId, filename, scenario } = await req.json();
-  const client = getClient(session.firmId, Number(clientId));
+  const client = await getClient(session.firmId, Number(clientId));
   if (!client) return NextResponse.json({ error: "Client not found" }, { status: 404 });
 
-  const result = processReceipt(
+  const result = await processReceipt(
     session.firmId,
     client.id,
     filename || "receipt.jpg",

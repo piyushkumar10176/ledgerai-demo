@@ -11,7 +11,7 @@ export async function POST(
 
   const { id } = await params;
   try {
-    rejectReceipt(session.firmId, Number(id));
+    await rejectReceipt(session.firmId, Number(id));
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 400 });

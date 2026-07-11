@@ -8,12 +8,12 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { clientId, periodStart, periodEnd } = await req.json();
-  const client = getClient(session.firmId, Number(clientId));
+  const client = await getClient(session.firmId, Number(clientId));
   if (!client) return NextResponse.json({ error: "Client not found" }, { status: 404 });
   if (!periodStart || !periodEnd)
     return NextResponse.json({ error: "Period required" }, { status: 400 });
 
-  const result = submitVatReturn(
+  const result = await submitVatReturn(
     session.firmId,
     client.id,
     periodStart,

@@ -1,18 +1,15 @@
-import Database from "better-sqlite3";
-import path from "node:path";
-import fs from "node:fs";
+import { createClient, type Client, type InArgs } from "@libsql/client";
 
-const DB_PATH = path.join(process.cwd(), "data", "ledgerai.db");
+// Data store: libSQL. Local dev uses a file DB; production (Vercel) points at a
+// Turso database via env vars. Same code path either way.
+//   TURSO_DATABASE_URL  e.g. libsql://your-db.turso.io   (falls back to a local file)
+//   TURSO_AUTH_TOKEN    Turso auth token (not needed for the local file)
 
-// Cache the connection across Next dev hot-reloads.
-declare global {
-  // eslint-disable-next-line no-var
-  var __ledgerDb: Database.Database | undefined;
-}
+let _client: Client | null = null;
+let _init: Promise<Client> | null = null;
 
-// Full schema. Every tenant-scoped table carries firm_id (multi-tenancy handle).
-// Money columns are INTEGER pennies. Journal entries/lines are append-only:
-// corrections are made by posting a REVERSAL, never by editing a posted entry.
+// Schema (SQLite dialect — libSQL is SQLite). Every tenant-scoped table carries
+// firm_id. Money is INTEGER pennies. Journal is append-only (correct via reversal).
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS firms (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -40,7 +37,6 @@ CREATE TABLE IF NOT EXISTS clients (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
--- Chart of accounts, per client.
 CREATE TABLE IF NOT EXISTS accounts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   firm_id INTEGER NOT NULL REFERENCES firms(id),
@@ -53,14 +49,13 @@ CREATE TABLE IF NOT EXISTS accounts (
   UNIQUE(client_id, code)
 );
 
--- Double-entry journal: header + lines. Append-only.
 CREATE TABLE IF NOT EXISTS journal_entries (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   firm_id INTEGER NOT NULL REFERENCES firms(id),
   client_id INTEGER NOT NULL REFERENCES clients(id),
   entry_date TEXT NOT NULL,
   description TEXT NOT NULL,
-  source TEXT NOT NULL,               -- manual | bank_import | receipt | reversal
+  source TEXT NOT NULL,
   reverses_entry_id INTEGER REFERENCES journal_entries(id),
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -69,8 +64,8 @@ CREATE TABLE IF NOT EXISTS journal_lines (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   entry_id INTEGER NOT NULL REFERENCES journal_entries(id),
   account_id INTEGER NOT NULL REFERENCES accounts(id),
-  debit INTEGER NOT NULL DEFAULT 0,   -- pennies
-  credit INTEGER NOT NULL DEFAULT 0,  -- pennies
+  debit INTEGER NOT NULL DEFAULT 0,
+  credit INTEGER NOT NULL DEFAULT 0,
   CHECK (debit >= 0 AND credit >= 0),
   CHECK (NOT (debit > 0 AND credit > 0))
 );
@@ -79,20 +74,18 @@ CREATE INDEX IF NOT EXISTS idx_lines_entry ON journal_lines(entry_id);
 CREATE INDEX IF NOT EXISTS idx_lines_account ON journal_lines(account_id);
 CREATE INDEX IF NOT EXISTS idx_entries_client ON journal_entries(client_id);
 
--- Imported bank statement rows (step 4).
 CREATE TABLE IF NOT EXISTS bank_transactions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   firm_id INTEGER NOT NULL REFERENCES firms(id),
   client_id INTEGER NOT NULL REFERENCES clients(id),
   txn_date TEXT NOT NULL,
   description TEXT NOT NULL,
-  amount INTEGER NOT NULL,            -- pennies; +credit into bank, -debit out
+  amount INTEGER NOT NULL,
   batch TEXT NOT NULL,
   entry_id INTEGER REFERENCES journal_entries(id),
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
--- Receipts + OCR/AI results (step 5).
 CREATE TABLE IF NOT EXISTS receipts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   firm_id INTEGER NOT NULL REFERENCES firms(id),
@@ -100,17 +93,16 @@ CREATE TABLE IF NOT EXISTS receipts (
   filename TEXT NOT NULL,
   supplier TEXT,
   receipt_date TEXT,
-  gross INTEGER,                      -- pennies
-  vat INTEGER,                        -- pennies
-  net INTEGER,                        -- pennies
+  gross INTEGER,
+  vat INTEGER,
+  net INTEGER,
   suggested_account_id INTEGER REFERENCES accounts(id),
   confidence REAL,
-  status TEXT NOT NULL DEFAULT 'review', -- review | auto_posted | confirmed | rejected
+  status TEXT NOT NULL DEFAULT 'review',
   entry_id INTEGER REFERENCES journal_entries(id),
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
--- Audit of every AI decision, for explainability (per FRD DOC/AI requirements).
 CREATE TABLE IF NOT EXISTS ai_decisions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   firm_id INTEGER NOT NULL REFERENCES firms(id),
@@ -121,11 +113,10 @@ CREATE TABLE IF NOT EXISTS ai_decisions (
   confidence REAL,
   suggested_account_id INTEGER REFERENCES accounts(id),
   reviewer_user_id INTEGER REFERENCES users(id),
-  outcome TEXT,                       -- auto_posted | confirmed | overridden | rejected
+  outcome TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
--- VAT returns (step 6). 9 boxes stored in pennies; deterministic, code-computed.
 CREATE TABLE IF NOT EXISTS vat_returns (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   firm_id INTEGER NOT NULL REFERENCES firms(id),
@@ -135,20 +126,51 @@ CREATE TABLE IF NOT EXISTS vat_returns (
   box1 INTEGER NOT NULL, box2 INTEGER NOT NULL, box3 INTEGER NOT NULL,
   box4 INTEGER NOT NULL, box5 INTEGER NOT NULL, box6 INTEGER NOT NULL,
   box7 INTEGER NOT NULL, box8 INTEGER NOT NULL, box9 INTEGER NOT NULL,
-  status TEXT NOT NULL DEFAULT 'draft',   -- draft | submitted
+  status TEXT NOT NULL DEFAULT 'draft',
   hmrc_receipt TEXT,
   submitted_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 `;
 
-export function getDb(): Database.Database {
-  if (globalThis.__ledgerDb) return globalThis.__ledgerDb;
-  fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
-  const db = new Database(DB_PATH);
-  db.pragma("journal_mode = WAL");
-  db.pragma("foreign_keys = ON");
-  db.exec(SCHEMA);
-  globalThis.__ledgerDb = db;
-  return db;
+async function build(): Promise<Client> {
+  const url =
+    process.env.TURSO_DATABASE_URL ||
+    process.env.LIBSQL_URL ||
+    "file:./data/ledgerai.db";
+  const authToken =
+    process.env.TURSO_AUTH_TOKEN || process.env.LIBSQL_AUTH_TOKEN;
+  const client = createClient({ url, authToken, intMode: "number" });
+  await client.executeMultiple(SCHEMA);
+  return client;
+}
+
+// Memoized client (survives warm serverless invocations + dev hot-reload).
+export async function db(): Promise<Client> {
+  if (_client) return _client;
+  if (!_init) _init = build().then((c) => (_client = c));
+  return _init;
+}
+
+// --- small query helpers so callers stay tidy ---
+
+export async function one<T>(
+  sql: string,
+  args: InArgs = [],
+): Promise<T | undefined> {
+  const rs = await (await db()).execute({ sql, args });
+  return rs.rows[0] as T | undefined;
+}
+
+export async function many<T>(sql: string, args: InArgs = []): Promise<T[]> {
+  const rs = await (await db()).execute({ sql, args });
+  return rs.rows as unknown as T[];
+}
+
+export async function run(
+  sql: string,
+  args: InArgs = [],
+): Promise<{ lastId: number; changes: number }> {
+  const rs = await (await db()).execute({ sql, args });
+  return { lastId: Number(rs.lastInsertRowid ?? 0), changes: rs.rowsAffected };
 }

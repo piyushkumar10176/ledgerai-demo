@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
 
   try {
-    const entryId = categoriseBankTransaction(
+    const entryId = await categoriseBankTransaction(
       session.firmId,
       Number(txnId),
       String(accountCode),

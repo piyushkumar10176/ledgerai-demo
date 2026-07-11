@@ -14,14 +14,14 @@ export default async function ImportPage({
   if (!session) redirect("/login");
   const { id } = await params;
   const clientId = Number(id);
-  const client = getClient(session.firmId, clientId);
+  const client = await getClient(session.firmId, clientId);
   if (!client) notFound();
 
-  const transactions = listBankTransactions(clientId);
-  const incomeAccounts = listAccounts(clientId)
+  const transactions = await listBankTransactions(clientId);
+  const incomeAccounts = (await listAccounts(clientId))
     .filter((a) => a.type === "INCOME")
     .map((a) => ({ code: a.code, name: a.name }));
-  const expenseAccounts = listCategoryAccounts(clientId).map((a) => ({
+  const expenseAccounts = (await listCategoryAccounts(clientId)).map((a) => ({
     code: a.code,
     name: a.name,
   }));

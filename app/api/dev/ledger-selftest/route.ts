@@ -1,57 +1,53 @@
 import { NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { run } from "@/lib/db";
 import { ensureFirmAndClient } from "@/lib/seed";
 import { postEntry, trialBalance, LedgerError } from "@/lib/ledger";
 import { computeVatReturn } from "@/lib/vat";
 import { formatGBP } from "@/lib/money";
 
-// DEV-ONLY self-test proving the double-entry ledger + deterministic VAT engine.
+// DEV-ONLY self-test: double-entry ledger + deterministic VAT engine.
 // Uses an isolated "__selftest__" client that it resets on each run.
 export async function GET() {
-  const { firmId, clientId } = ensureFirmAndClient(
+  const { firmId, clientId } = await ensureFirmAndClient(
     "__selftest_firm__",
     "__selftest__",
   );
-  const db = getDb();
 
   // Reset this test client's journal (dev-only wipe; real ledger is append-only).
-  const entryIds = db
-    .prepare(`SELECT id FROM journal_entries WHERE client_id = ?`)
-    .all(clientId) as { id: number }[];
-  const wipe = db.transaction(() => {
-    for (const e of entryIds)
-      db.prepare(`DELETE FROM journal_lines WHERE entry_id = ?`).run(e.id);
-    db.prepare(`DELETE FROM journal_entries WHERE client_id = ?`).run(clientId);
-  });
-  wipe();
+  await run(
+    `DELETE FROM journal_lines WHERE entry_id IN
+       (SELECT id FROM journal_entries WHERE client_id = ?)`,
+    [clientId],
+  );
+  await run(`DELETE FROM journal_entries WHERE client_id = ?`, [clientId]);
 
   const checks: { name: string; pass: boolean; detail: string }[] = [];
 
   // 1) Balanced SALE: £1,000 net + £200 VAT received into bank.
-  postEntry({
+  await postEntry({
     firmId,
     clientId,
     date: "2026-04-10",
     description: "Sale to customer (invoice 001)",
     source: "manual",
     lines: [
-      { accountCode: "1200", debit: 120000 }, // Bank
-      { accountCode: "4000", credit: 100000 }, // Sales
-      { accountCode: "2200", credit: 20000 }, // Output VAT
+      { accountCode: "1200", debit: 120000 },
+      { accountCode: "4000", credit: 100000 },
+      { accountCode: "2200", credit: 20000 },
     ],
   });
 
-  // 2) Balanced PURCHASE: £300 net + £60 VAT of office supplies paid from bank.
-  postEntry({
+  // 2) Balanced PURCHASE: £300 net + £60 VAT of office supplies.
+  await postEntry({
     firmId,
     clientId,
     date: "2026-04-15",
     description: "Office supplies (receipt)",
     source: "manual",
     lines: [
-      { accountCode: "6000", debit: 30000 }, // Office Supplies
-      { accountCode: "1210", debit: 6000 }, // Input VAT
-      { accountCode: "1200", credit: 36000 }, // Bank
+      { accountCode: "6000", debit: 30000 },
+      { accountCode: "1210", debit: 6000 },
+      { accountCode: "1200", credit: 36000 },
     ],
   });
   checks.push({
@@ -64,7 +60,7 @@ export async function GET() {
   let rejected = false;
   let rejectMsg = "";
   try {
-    postEntry({
+    await postEntry({
       firmId,
       clientId,
       date: "2026-04-16",
@@ -72,7 +68,7 @@ export async function GET() {
       source: "manual",
       lines: [
         { accountCode: "1200", debit: 5000 },
-        { accountCode: "4000", credit: 4000 }, // 5000 != 4000
+        { accountCode: "4000", credit: 4000 },
       ],
     });
   } catch (e) {
@@ -85,8 +81,8 @@ export async function GET() {
     detail: rejectMsg,
   });
 
-  // 4) Trial balance must balance (total debits == total credits).
-  const tb = trialBalance(clientId);
+  // 4) Trial balance must balance.
+  const tb = await trialBalance(clientId);
   checks.push({
     name: "Trial balance balances",
     pass: tb.balanced,
@@ -94,15 +90,8 @@ export async function GET() {
   });
 
   // 5) Deterministic VAT return for Q1 (Apr-Jun 2026).
-  const vat = computeVatReturn(clientId, "2026-04-01", "2026-06-30");
-  const expected = {
-    box1: 20000, // output VAT
-    box3: 20000,
-    box4: 6000, // input VAT
-    box5: 14000, // net payable = 20000 - 6000
-    box6: 100000, // net sales
-    box7: 30000, // net purchases
-  };
+  const vat = await computeVatReturn(clientId, "2026-04-01", "2026-06-30");
+  const expected = { box1: 20000, box3: 20000, box4: 6000, box5: 14000, box6: 100000, box7: 30000 };
   const vatPass =
     vat.box1 === expected.box1 &&
     vat.box3 === expected.box3 &&
@@ -120,9 +109,7 @@ export async function GET() {
   return NextResponse.json(
     {
       ok: allPass,
-      summary: allPass
-        ? "All ledger + VAT self-tests passed."
-        : "Some self-tests FAILED.",
+      summary: allPass ? "All ledger + VAT self-tests passed." : "Some self-tests FAILED.",
       checks,
       trialBalance: {
         balanced: tb.balanced,

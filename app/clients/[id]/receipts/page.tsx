@@ -15,11 +15,11 @@ export default async function ReceiptsPage({
   if (!session) redirect("/login");
   const { id } = await params;
   const clientId = Number(id);
-  const client = getClient(session.firmId, clientId);
+  const client = await getClient(session.firmId, clientId);
   if (!client) notFound();
 
-  const receipts = listReceipts(clientId);
-  const categories = listCategoryAccounts(clientId).map((a) => ({
+  const receipts = await listReceipts(clientId);
+  const categories = (await listCategoryAccounts(clientId)).map((a) => ({
     code: a.code,
     name: a.name,
   }));

@@ -5,6 +5,6 @@ import { seedSampleData } from "@/lib/sample-data";
 export async function POST(req: Request) {
   const session = await getSession();
   if (!session) return NextResponse.redirect(new URL("/login", req.url));
-  seedSampleData(session.firmId);
+  await seedSampleData(session.firmId);
   return NextResponse.redirect(new URL("/dashboard", req.url));
 }

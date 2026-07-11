@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth";
 import { ensureDemoData, DEMO_EMAIL, DEMO_PASSWORD } from "@/lib/seed";
 
 export default async function LoginPage() {
-  ensureDemoData(); // make sure the demo firm/user/client exist
+  await ensureDemoData(); // make sure the demo firm/user/client exist
   const session = await getSession();
   if (session) redirect("/dashboard");
 

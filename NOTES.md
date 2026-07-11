@@ -97,27 +97,23 @@ Verified working: Next.js 16.2.10 dev server, page renders at http://localhost:3
 **Reconciled figures** if you categorise the full sample as above + both receipts:
 Box 1 £1,300.00 · Box 4 £218.00 · **Box 5 (net VAT payable) £1,082.00** · Box 6 £6,500.00 · Box 7 £2,290.00. (Verified against the deterministic engine.)
 
-## Sharing for review (Cloudflare tunnel)
-The app runs on this Mac and is exposed publicly via a Cloudflare "quick tunnel".
+## Hosting: Vercel + Turso
+The app is deployed on Vercel with a Turso (libSQL) database.
 
-- **Live link (current session):** https://ladies-ended-traffic-posting.trycloudflare.com
-- **Reviewer login:** `demo@ledgerai.test` / `demo1234`
-- **To (re)start sharing** after a reboot / sleep / closing the terminal:
-  ```
-  cd ~/ledgerai-demo && ./share.sh
-  ```
-  It builds, starts the production server on :3000, and opens the tunnel — the
-  new public URL is printed in the terminal.
+- **Data layer:** `@libsql/client` (async). Local dev uses a file DB
+  (`data/ledgerai.db`); production reads `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN`.
+  Same code path both places. See `lib/db.ts` and `.env.example`.
+- **Reviewer login:** `demo@ledgerai.test` / `demo1234`.
+- **Self-seed:** on first request the app seeds the demo firm/user + 3 sample clients
+  (idempotent), so a brand-new Turso DB is populated automatically.
+- **Deploy flow:** push to GitHub `main` → Vercel auto-builds & deploys.
+  Env vars (`TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `SESSION_SECRET`) set in the
+  Vercel project settings.
 
-**Important caveats (told the reviewers or not, know these):**
-- The link only works while this **Mac is awake** with `next start` + `cloudflared`
-  running. If the Mac sleeps, the link dies. (System Settings → keep awake, or run
-  `caffeinate -s` alongside.)
-- The **quick-tunnel URL is random and changes every restart.** A stable custom URL
-  needs a (free) Cloudflare account + a named tunnel, or a real cloud deploy.
-- All reviewers **share one SQLite database** — if one adds/resets data, everyone
-  sees it. There's a "Load sample data" and a "Reset demo data" button on the dashboard.
-- No uptime guarantee (it's the free account-less tunnel).
+Data persists in Turso (unlike an ephemeral host), so reviewer-added data sticks.
+Dashboard has "Load sample data" and "Reset demo data" buttons.
+
+> `share.sh` (Cloudflare tunnel) is left in the repo as a local-only fallback; not used for the hosted link.
 
 ## Correctness self-test
 `GET /api/dev/ledger-selftest` posts a balanced sale + purchase, proves an unbalanced

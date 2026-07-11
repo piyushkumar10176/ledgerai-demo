@@ -1,7 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // better-sqlite3 is a native module; keep it external to the server bundle.
-  serverExternalPackages: ["better-sqlite3"],
+  // Keep the libSQL client (and its optional native bits) out of the bundle so
+  // it works in serverless functions on Vercel.
+  serverExternalPackages: ["@libsql/client", "libsql"],
 };
 
 export default nextConfig;
