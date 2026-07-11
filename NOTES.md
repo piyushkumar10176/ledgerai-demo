@@ -79,8 +79,15 @@ npm run dev      # then open http://localhost:3000
 ```
 Verified working: Next.js 16.2.10 dev server, page renders at http://localhost:3000.
 
+## Obligations control tower (PRD §6.6 — "the dashboard is the product")
+The dashboard is a firm-wide control tower: every client × their VAT obligation for
+the quarter, red/amber/green (missing data / ready to file / filed), deadline
+countdown, open-exception counts, and one-click **Chase** (mock) / **Review & file**.
+Net VAT for "ready" clients is the deterministic engine's figure. Sample data is set
+up to show a real spread: 1 missing, 1 ready (£280 to file), 2 filed.
+
 ## Demo walkthrough (the flow to click through)
-1. Open http://localhost:3000 → login is pre-filled (`demo@ledgerai.test` / `demo1234`) → **Sign in**.
+1. Open the app → login is pre-filled (`demo@ledgerai.test` / `demo1234`) → **Sign in** → land on the **control tower**.
 2. **Clients** → open **Bright Bakery Ltd** (pre-seeded with a chart of accounts).
 3. **Bank import** tab → **Load sample statement** (10 rows). For each line pick a
    category + VAT treatment → **Post**. Income (Sumup) → Sales / VAT 20%. Expenses:
