@@ -8,6 +8,7 @@ export default async function Nav() {
     { href: "/dashboard", label: "Control tower" },
     { href: "/review", label: "Review queue" },
     { href: "/mandation", label: "Mandation" },
+    { href: "/hmrc", label: "HMRC" },
   ];
   return (
     <header className="border-b border-slate-200 bg-white">

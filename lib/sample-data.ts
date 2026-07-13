@@ -1,6 +1,7 @@
 import { one, run } from "./db";
 import { addTransaction } from "./transactions";
 import { submitQuarterlyUpdate } from "./quarterly-submit";
+import { setClientServices } from "./services";
 import type { SourceType } from "./hmrc-categories";
 
 // Sample ITSA clients for the demo, each with an income source, categorised
@@ -18,6 +19,7 @@ interface SampleClient {
   source: { type: SourceType; businessName: string; turnover: number };
   txns: TxnSpec[];
   submitQ1: boolean;
+  services: string[];
 }
 
 const SAMPLES: SampleClient[] = [
@@ -36,6 +38,7 @@ const SAMPLES: SampleClient[] = [
       { date: "2026-06-14", desc: "The Corner Bistro", signed: -8400 }, // low conf -> review
     ],
     submitQ1: true,
+    services: ["bookkeeping", "vat", "mtd-itsa"],
   },
   {
     name: "Tom Fletcher",
@@ -51,6 +54,7 @@ const SAMPLES: SampleClient[] = [
       { date: "2026-06-08", desc: "Premier Stores", signed: -4800 }, // low conf -> review
     ],
     submitQ1: false, // stays "ready to file" (amber)
+    services: ["bookkeeping", "mtd-itsa", "payroll"],
   },
   {
     name: "Aisha Khan",
@@ -64,6 +68,7 @@ const SAMPLES: SampleClient[] = [
       { date: "2026-06-01", desc: "Managing agent professional fee", signed: -60000 },
     ],
     submitQ1: true,
+    services: ["mtd-itsa"],
   },
   {
     name: "Sam Rivers",
@@ -72,6 +77,7 @@ const SAMPLES: SampleClient[] = [
     source: { type: "self-employment", businessName: "Rivers Design", turnover: 5_500_000 },
     txns: [], // no data -> "missing" (red); the hands-on client
     submitQ1: false,
+    services: ["bookkeeping", "mtd-itsa"],
   },
 ];
 
@@ -92,6 +98,7 @@ export async function seedSampleData(firmId: number): Promise<void> {
     } else {
       clientId = client.id;
     }
+    await setClientServices(clientId, spec.services);
 
     let source = await one<{ id: number }>(
       `SELECT id FROM income_sources WHERE client_id = ?`,

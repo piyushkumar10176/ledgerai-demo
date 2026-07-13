@@ -120,6 +120,25 @@ CREATE TABLE IF NOT EXISTS magic_links (
   expires_at TEXT,
   used_at TEXT
 );
+
+-- Which services each client has engaged the firm for (multi-select).
+CREATE TABLE IF NOT EXISTS client_services (
+  client_id INTEGER NOT NULL REFERENCES clients(id),
+  service TEXT NOT NULL,   -- bookkeeping | vat | mtd-itsa | payroll
+  PRIMARY KEY (client_id, service)
+);
+
+-- Stored HMRC OAuth tokens (per firm agent connection).
+CREATE TABLE IF NOT EXISTS hmrc_connections (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  firm_id INTEGER NOT NULL REFERENCES firms(id),
+  kind TEXT NOT NULL DEFAULT 'agent',   -- agent (user-restricted) | application
+  access_token TEXT,
+  refresh_token TEXT,
+  scope TEXT,
+  expires_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 `;
 
 async function build(): Promise<Client> {

@@ -3,10 +3,30 @@
 @tailwind utilities;
 
 :root {
-  --bg: #f8fafc;
+  color-scheme: light;
 }
 
 body {
-  background: var(--bg);
+  background:
+    radial-gradient(1200px 500px at 100% -10%, rgba(99, 102, 241, 0.08), transparent 60%),
+    radial-gradient(1000px 400px at -10% 0%, rgba(14, 165, 233, 0.07), transparent 55%),
+    #f6f7fb;
   color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
+
+/* Subtle card hover lift */
+.card {
+  @apply rounded-2xl border border-slate-200/80 bg-white shadow-sm;
+}
+.card-hover {
+  @apply transition hover:-translate-y-0.5 hover:shadow-md;
+}
+
+/* thin scrollbars for wide tables */
+.scroll-x {
+  overflow-x: auto;
+}
+.scroll-x::-webkit-scrollbar { height: 8px; }
+.scroll-x::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
