@@ -1,124 +1,79 @@
 import { one, run } from "./db";
-import { seedChartOfAccounts } from "./coa";
-import { postEntry } from "./ledger";
-import { splitGross } from "./money";
-import { processReceipt } from "./receipts";
-import { submitVatReturn } from "./vat-submit";
+import { addTransaction } from "./transactions";
+import { submitQuarterlyUpdate } from "./quarterly-submit";
+import type { SourceType } from "./hmrc-categories";
 
-// Sample data for review/demo: a few extra clients each pre-populated with a
-// ledger, receipts (incl. a review-queue item) and a submitted VAT return.
-// Idempotent: clients created once; a client is only populated if it has no
-// journal entries yet (survives the "Reset demo data" button).
+// Sample ITSA clients for the demo, each with an income source, categorised
+// transactions for 2026/27 Q1, and (for some) a submitted quarterly update.
+// Idempotent: a client is only populated once.
 
-interface Sale {
-  date: string;
-  desc: string;
-  gross: number;
-}
-interface Purchase {
-  date: string;
-  desc: string;
-  code: string;
-  gross: number;
-  vat: "standard" | "none";
-}
+interface TxnSpec { date: string; desc: string; signed: number } // signed pennies
 interface SampleClient {
   name: string;
-  companyNumber: string;
-  vatNumber: string;
-  sales: Sale[];
-  purchases: Purchase[];
-  receipts: string[];
-  vatPeriod: { start: string; end: string };
-  submitVat?: boolean; // false => stays "ready to file" (amber) in the control tower
+  nino: string;
+  utr: string;
+  phone: string;
+  mandation: { status: string; wave: string | null };
+  agentAuth: string;
+  source: { type: SourceType; businessName: string; turnover: number };
+  txns: TxnSpec[];
+  submitQ1: boolean;
 }
 
 const SAMPLES: SampleClient[] = [
   {
-    name: "Green Thumb Landscaping Ltd",
-    companyNumber: "11223344",
-    vatNumber: "GB222333444",
-    sales: [
-      { date: "2026-04-05", desc: "Garden design — Oakwood", gross: 240000 },
-      { date: "2026-04-20", desc: "Maintenance contract", gross: 180000 },
-      { date: "2026-05-10", desc: "Patio installation", gross: 360000 },
+    name: "Priya Shah",
+    nino: "QQ123456C", utr: "1234567890", phone: "07700 900111",
+    mandation: { status: "mandated", wave: "2026" }, agentAuth: "linked",
+    source: { type: "self-employment", businessName: "Priya's Catering", turnover: 6_000_000 },
+    txns: [
+      { date: "2026-04-15", desc: "Sumup takings settlement", signed: 320000 },
+      { date: "2026-05-20", desc: "Sumup takings settlement", signed: 280000 },
+      { date: "2026-06-10", desc: "Event catering invoice", signed: 150000 },
+      { date: "2026-04-22", desc: "Flour Power wholesale", signed: -90000 },
+      { date: "2026-05-06", desc: "Shell fuel", signed: -18000 },
+      { date: "2026-05-28", desc: "British Gas premises", signed: -24000 },
+      { date: "2026-06-14", desc: "The Corner Bistro", signed: -8400 }, // low conf -> review
     ],
-    purchases: [
-      { date: "2026-04-08", desc: "Plants & materials", code: "5000", gross: 96000, vat: "standard" },
-      { date: "2026-04-12", desc: "Van fuel", code: "6200", gross: 12000, vat: "standard" },
-      { date: "2026-05-01", desc: "Yard rent", code: "6100", gross: 60000, vat: "none" },
-    ],
-    receipts: ["fuel", "misc"],
-    vatPeriod: { start: "2026-04-01", end: "2026-06-30" },
+    submitQ1: true,
   },
   {
-    name: "Willow Lane Boutique",
-    companyNumber: "22334455",
-    vatNumber: "GB333444555",
-    sales: [
-      { date: "2026-04-03", desc: "Card takings week 1", gross: 312000 },
-      { date: "2026-04-17", desc: "Card takings week 3", gross: 288000 },
-      { date: "2026-05-08", desc: "Card takings week 6", gross: 336000 },
+    name: "Tom Fletcher",
+    nino: "QQ234567B", utr: "2345678901", phone: "07700 900222",
+    mandation: { status: "mandated", wave: "2026" }, agentAuth: "linked",
+    source: { type: "self-employment", businessName: "Fletcher Plumbing", turnover: 12_000_000 },
+    txns: [
+      { date: "2026-04-20", desc: "Card settlement", signed: 840000 },
+      { date: "2026-05-15", desc: "Invoice - bathroom job", signed: 620000 },
+      { date: "2026-04-25", desc: "Wickes materials", signed: -240000 },
+      { date: "2026-05-02", desc: "Subcontractor labour", signed: -180000 },
+      { date: "2026-05-19", desc: "Diesel BP", signed: -32000 },
+      { date: "2026-06-08", desc: "Premier Stores", signed: -4800 }, // low conf -> review
     ],
-    purchases: [
-      { date: "2026-04-06", desc: "Stock — spring range", code: "5000", gross: 180000, vat: "standard" },
-      { date: "2026-04-22", desc: "Shopfront utilities", code: "6400", gross: 21600, vat: "standard" },
-      { date: "2026-05-02", desc: "Store rent", code: "6100", gross: 150000, vat: "none" },
-    ],
-    receipts: ["office"],
-    vatPeriod: { start: "2026-04-01", end: "2026-06-30" },
+    submitQ1: false, // stays "ready to file" (amber)
   },
   {
-    name: "Cloudpeak Consulting Ltd",
-    companyNumber: "33445566",
-    vatNumber: "GB444555666",
-    sales: [{ date: "2026-04-14", desc: "Advisory retainer — Q1", gross: 420000 }],
-    purchases: [
-      { date: "2026-04-09", desc: "Cloud hosting", code: "6400", gross: 72000, vat: "standard" },
-      { date: "2026-04-18", desc: "Subcontractor — design", code: "6300", gross: 180000, vat: "standard" },
-      { date: "2026-05-05", desc: "Office rent", code: "6100", gross: 90000, vat: "none" },
+    name: "Aisha Khan",
+    nino: "QQ345678A", utr: "3456789012", phone: "07700 900333",
+    mandation: { status: "mandated", wave: "2027" }, agentAuth: "pending",
+    source: { type: "uk-property", businessName: "Khan Property Lettings", turnover: 3_000_000 },
+    txns: [
+      { date: "2026-04-05", desc: "Rent received - flat 1", signed: 360000 },
+      { date: "2026-05-05", desc: "Rent received - flat 2", signed: 240000 },
+      { date: "2026-05-12", desc: "Boiler repair", signed: -48000 },
+      { date: "2026-06-01", desc: "Managing agent professional fee", signed: -60000 },
     ],
-    receipts: ["cafe"],
-    vatPeriod: { start: "2026-04-01", end: "2026-06-30" },
-    submitVat: false, // leave unfiled -> shows as "ready to file" in the control tower
+    submitQ1: true,
+  },
+  {
+    name: "Sam Rivers",
+    nino: "QQ456789D", utr: "4567890123", phone: "07700 900444",
+    mandation: { status: "mandated", wave: "2026" }, agentAuth: "missing",
+    source: { type: "self-employment", businessName: "Rivers Design", turnover: 5_500_000 },
+    txns: [], // no data -> "missing" (red); the hands-on client
+    submitQ1: false,
   },
 ];
-
-function postSale(firmId: number, clientId: number, s: Sale): Promise<number> {
-  const { net, vat } = splitGross(s.gross);
-  return postEntry({
-    firmId,
-    clientId,
-    date: s.date,
-    description: s.desc,
-    source: "manual",
-    lines: [
-      { accountCode: "1200", debit: s.gross },
-      { accountCode: "4000", credit: net },
-      { accountCode: "2200", credit: vat },
-    ],
-  });
-}
-
-function postPurchase(
-  firmId: number,
-  clientId: number,
-  p: Purchase,
-): Promise<number> {
-  const split = p.vat === "standard" ? splitGross(p.gross) : { net: p.gross, vat: 0 };
-  return postEntry({
-    firmId,
-    clientId,
-    date: p.date,
-    description: p.desc,
-    source: "bank_import",
-    lines: [
-      { accountCode: p.code, debit: split.net },
-      ...(split.vat > 0 ? [{ accountCode: "1210", debit: split.vat }] : []),
-      { accountCode: "1200", credit: p.gross },
-    ],
-  });
-}
 
 export async function seedSampleData(firmId: number): Promise<void> {
   for (const spec of SAMPLES) {
@@ -126,32 +81,51 @@ export async function seedSampleData(firmId: number): Promise<void> {
       `SELECT id FROM clients WHERE firm_id = ? AND name = ?`,
       [firmId, spec.name],
     );
+    let clientId: number;
     if (!client) {
       const r = await run(
-        `INSERT INTO clients (firm_id, name, company_number, vat_number)
-         VALUES (?, ?, ?, ?)`,
-        [firmId, spec.name, spec.companyNumber, spec.vatNumber],
+        `INSERT INTO clients (firm_id, name, nino, utr, phone, mandation_status, mandation_wave, agent_auth_status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [firmId, spec.name, spec.nino, spec.utr, spec.phone, spec.mandation.status, spec.mandation.wave, spec.agentAuth],
       );
-      client = { id: r.lastId };
-      await seedChartOfAccounts(firmId, client.id);
+      clientId = r.lastId;
+    } else {
+      clientId = client.id;
     }
 
-    const count = await one<{ n: number }>(
-      `SELECT COUNT(*) AS n FROM journal_entries WHERE client_id = ?`,
-      [client.id],
+    let source = await one<{ id: number }>(
+      `SELECT id FROM income_sources WHERE client_id = ?`,
+      [clientId],
     );
-    if ((count?.n ?? 0) > 0) continue; // already populated
-
-    for (const s of spec.sales) await postSale(firmId, client.id, s);
-    for (const p of spec.purchases) await postPurchase(firmId, client.id, p);
-    for (let i = 0; i < spec.receipts.length; i++)
-      await processReceipt(
-        firmId,
-        client.id,
-        `sample-${spec.receipts[i]}-${i}.jpg`,
-        spec.receipts[i],
+    let sourceId: number;
+    if (!source) {
+      const r = await run(
+        `INSERT INTO income_sources (firm_id, client_id, type, business_name, hmrc_business_id, accounting_method, annual_turnover)
+         VALUES (?, ?, ?, ?, ?, 'cash', ?)`,
+        [firmId, clientId, spec.source.type, spec.source.businessName, "XBIS" + (100000 + clientId), spec.source.turnover],
       );
-    if (spec.submitVat !== false)
-      await submitVatReturn(firmId, client.id, spec.vatPeriod.start, spec.vatPeriod.end);
+      sourceId = r.lastId;
+    } else {
+      sourceId = source.id;
+    }
+
+    // Only populate transactions once.
+    const count = await one<{ n: number }>(
+      `SELECT COUNT(*) AS n FROM transactions WHERE income_source_id = ?`,
+      [sourceId],
+    );
+    if ((count?.n ?? 0) > 0) continue;
+
+    for (const t of spec.txns)
+      await addTransaction(firmId, clientId, sourceId, spec.source.type, {
+        date: t.date,
+        description: t.desc,
+        signedAmount: t.signed,
+        source: "bank",
+        provenance: "sample data",
+      });
+
+    if (spec.submitQ1 && spec.txns.length > 0)
+      await submitQuarterlyUpdate(firmId, clientId, sourceId, "2026Q1");
   }
 }

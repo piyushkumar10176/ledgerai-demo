@@ -1,15 +1,15 @@
 import { createClient, type Client, type InArgs } from "@libsql/client";
 
 // Data store: libSQL. Local dev uses a file DB; production (Vercel) points at a
-// Turso database via env vars. Same code path either way.
-//   TURSO_DATABASE_URL  e.g. libsql://your-db.turso.io   (falls back to a local file)
-//   TURSO_AUTH_TOKEN    Turso auth token (not needed for the local file)
+// Turso database via env vars.
+//   TURSO_DATABASE_URL / TURSO_AUTH_TOKEN
 
 let _client: Client | null = null;
 let _init: Promise<Client> | null = null;
 
-// Schema (SQLite dialect — libSQL is SQLite). Every tenant-scoped table carries
-// firm_id. Money is INTEGER pennies. Journal is append-only (correct via reversal).
+// MTD Income Tax schema (PRD §8). Single-entry digital records (transactions),
+// summed into cumulative quarterly updates. Every tenant row carries firm_id.
+// Money is INTEGER pennies.
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS firms (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -27,109 +27,98 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Layer 0: client setup.
 CREATE TABLE IF NOT EXISTS clients (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   firm_id INTEGER NOT NULL REFERENCES firms(id),
   name TEXT NOT NULL,
-  company_number TEXT,
-  vat_number TEXT,
-  vat_scheme TEXT NOT NULL DEFAULT 'standard',
+  nino TEXT,
+  utr TEXT,
+  dob TEXT,
+  mandation_status TEXT NOT NULL DEFAULT 'unknown', -- mandated | voluntary | not_mandated | unknown
+  mandation_wave TEXT,                              -- 2026 | 2027 | 2028
+  agent_auth_status TEXT NOT NULL DEFAULT 'missing', -- linked | pending | missing
+  phone TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE TABLE IF NOT EXISTS accounts (
+CREATE TABLE IF NOT EXISTS income_sources (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   firm_id INTEGER NOT NULL REFERENCES firms(id),
   client_id INTEGER NOT NULL REFERENCES clients(id),
-  code TEXT NOT NULL,
-  name TEXT NOT NULL,
-  type TEXT NOT NULL CHECK (type IN ('ASSET','LIABILITY','EQUITY','INCOME','EXPENSE')),
-  vat_role TEXT CHECK (vat_role IN ('output','input')),
-  is_category INTEGER NOT NULL DEFAULT 0,
-  UNIQUE(client_id, code)
-);
-
-CREATE TABLE IF NOT EXISTS journal_entries (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  firm_id INTEGER NOT NULL REFERENCES firms(id),
-  client_id INTEGER NOT NULL REFERENCES clients(id),
-  entry_date TEXT NOT NULL,
-  description TEXT NOT NULL,
-  source TEXT NOT NULL,
-  reverses_entry_id INTEGER REFERENCES journal_entries(id),
+  type TEXT NOT NULL CHECK (type IN ('self-employment','uk-property')),
+  business_name TEXT NOT NULL,
+  hmrc_business_id TEXT,
+  accounting_method TEXT NOT NULL DEFAULT 'cash', -- cash | accruals
+  annual_turnover INTEGER NOT NULL DEFAULT 0,      -- pennies, for the £90k mode
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE TABLE IF NOT EXISTS journal_lines (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  entry_id INTEGER NOT NULL REFERENCES journal_entries(id),
-  account_id INTEGER NOT NULL REFERENCES accounts(id),
-  debit INTEGER NOT NULL DEFAULT 0,
-  credit INTEGER NOT NULL DEFAULT 0,
-  CHECK (debit >= 0 AND credit >= 0),
-  CHECK (NOT (debit > 0 AND credit > 0))
-);
-
-CREATE INDEX IF NOT EXISTS idx_lines_entry ON journal_lines(entry_id);
-CREATE INDEX IF NOT EXISTS idx_lines_account ON journal_lines(account_id);
-CREATE INDEX IF NOT EXISTS idx_entries_client ON journal_entries(client_id);
-
-CREATE TABLE IF NOT EXISTS bank_transactions (
+-- Layer 1: digital records (single-entry categorised transactions).
+CREATE TABLE IF NOT EXISTS transactions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   firm_id INTEGER NOT NULL REFERENCES firms(id),
   client_id INTEGER NOT NULL REFERENCES clients(id),
+  income_source_id INTEGER NOT NULL REFERENCES income_sources(id),
   txn_date TEXT NOT NULL,
   description TEXT NOT NULL,
-  amount INTEGER NOT NULL,
-  batch TEXT NOT NULL,
-  entry_id INTEGER REFERENCES journal_entries(id),
+  direction TEXT NOT NULL CHECK (direction IN ('income','expense')),
+  category TEXT,                                   -- HMRC category code (null until categorised)
+  amount INTEGER NOT NULL,                         -- pennies, absolute
+  source TEXT NOT NULL DEFAULT 'manual',           -- bank | receipt | manual
+  provenance TEXT,                                 -- e.g. filename / bank line
+  confidence REAL,                                 -- AI confidence 0..1
+  status TEXT NOT NULL DEFAULT 'review',           -- review | auto | confirmed | rejected
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE TABLE IF NOT EXISTS receipts (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  firm_id INTEGER NOT NULL REFERENCES firms(id),
-  client_id INTEGER NOT NULL REFERENCES clients(id),
-  filename TEXT NOT NULL,
-  supplier TEXT,
-  receipt_date TEXT,
-  gross INTEGER,
-  vat INTEGER,
-  net INTEGER,
-  suggested_account_id INTEGER REFERENCES accounts(id),
-  confidence REAL,
-  status TEXT NOT NULL DEFAULT 'review',
-  entry_id INTEGER REFERENCES journal_entries(id),
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
+CREATE INDEX IF NOT EXISTS idx_txn_client ON transactions(client_id);
+CREATE INDEX IF NOT EXISTS idx_txn_source ON transactions(income_source_id);
+CREATE INDEX IF NOT EXISTS idx_txn_status ON transactions(status);
 
+-- Audit of every AI decision (PRD AIDecision).
 CREATE TABLE IF NOT EXISTS ai_decisions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   firm_id INTEGER NOT NULL REFERENCES firms(id),
-  receipt_id INTEGER REFERENCES receipts(id),
+  transaction_id INTEGER REFERENCES transactions(id),
   model TEXT NOT NULL,
   input_text TEXT,
   output_json TEXT,
   confidence REAL,
-  suggested_account_id INTEGER REFERENCES accounts(id),
+  suggested_category TEXT,
   reviewer_user_id INTEGER REFERENCES users(id),
-  outcome TEXT,
+  outcome TEXT,                                    -- auto | confirmed | overridden | rejected
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE TABLE IF NOT EXISTS vat_returns (
+-- Layer 2: quarterly cumulative update submissions.
+CREATE TABLE IF NOT EXISTS quarterly_updates (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   firm_id INTEGER NOT NULL REFERENCES firms(id),
   client_id INTEGER NOT NULL REFERENCES clients(id),
+  income_source_id INTEGER NOT NULL REFERENCES income_sources(id),
+  period_key TEXT NOT NULL,                        -- 2026Q1 ...
   period_start TEXT NOT NULL,
   period_end TEXT NOT NULL,
-  box1 INTEGER NOT NULL, box2 INTEGER NOT NULL, box3 INTEGER NOT NULL,
-  box4 INTEGER NOT NULL, box5 INTEGER NOT NULL, box6 INTEGER NOT NULL,
-  box7 INTEGER NOT NULL, box8 INTEGER NOT NULL, box9 INTEGER NOT NULL,
-  status TEXT NOT NULL DEFAULT 'draft',
+  income_total INTEGER NOT NULL,
+  expense_total INTEGER NOT NULL,
+  net_profit INTEGER NOT NULL,
+  payload_json TEXT NOT NULL,                      -- the per-category cumulative totals
+  status TEXT NOT NULL DEFAULT 'submitted',
   hmrc_receipt TEXT,
   submitted_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Magic links for zero-login client data collection.
+CREATE TABLE IF NOT EXISTS magic_links (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  firm_id INTEGER NOT NULL REFERENCES firms(id),
+  client_id INTEGER NOT NULL REFERENCES clients(id),
+  token TEXT NOT NULL UNIQUE,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  expires_at TEXT,
+  used_at TEXT
 );
 `;
 
@@ -145,14 +134,11 @@ async function build(): Promise<Client> {
   return client;
 }
 
-// Memoized client (survives warm serverless invocations + dev hot-reload).
 export async function db(): Promise<Client> {
   if (_client) return _client;
   if (!_init) _init = build().then((c) => (_client = c));
   return _init;
 }
-
-// --- small query helpers so callers stay tidy ---
 
 export async function one<T>(
   sql: string,

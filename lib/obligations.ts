@@ -1,78 +1,87 @@
-import { listClients } from "./data";
+import { listClients, listIncomeSources } from "./data";
 import { one } from "./db";
-import { computeVatReturn } from "./vat";
+import { computeQuarterlyUpdate } from "./quarterly";
+import { getSubmission } from "./quarterly-submit";
+import type { Quarter } from "./periods";
 
 export type ObligationStatus = "filed" | "ready" | "missing";
 
 export interface Obligation {
   clientId: number;
   clientName: string;
+  mandationStatus: string;
+  agentAuth: string;
+  sourceId: number;
+  businessName: string;
+  sourceType: string;
   status: ObligationStatus;
-  txnCount: number; // journal entries in the period
-  reviewCount: number; // receipts sitting in the review queue
-  netVat: number | null; // Box 5 (filed = stored, ready = computed), pennies
-  formBundle: string | null; // HMRC receipt ref if filed
+  reviewCount: number;
+  netProfit: number | null; // pennies
+  filedRef: string | null;
 }
 
-// Build the firm's obligation list for one VAT period. One row per client:
-//   filed   (green) = a submitted return exists for the period
-//   ready   (amber) = has ledger activity but not filed yet
-//   missing (red)   = no data captured for the period
+// Every client × income source obligation for the given quarter (PRD §6.6).
 export async function firmObligations(
   firmId: number,
-  periodStart: string,
-  periodEnd: string,
+  quarter: Quarter,
 ): Promise<Obligation[]> {
   const clients = await listClients(firmId);
   const out: Obligation[] = [];
 
   for (const c of clients) {
-    const filed = await one<{ box5: number; hmrc_receipt: string | null }>(
-      `SELECT box5, hmrc_receipt FROM vat_returns
-        WHERE client_id = ? AND period_start = ? AND period_end = ?
-          AND status = 'submitted'
-        ORDER BY id DESC LIMIT 1`,
-      [c.id, periodStart, periodEnd],
-    );
-    const txn = await one<{ n: number }>(
-      `SELECT COUNT(*) AS n FROM journal_entries
-        WHERE client_id = ? AND entry_date >= ? AND entry_date <= ?`,
-      [c.id, periodStart, periodEnd],
-    );
-    const rev = await one<{ n: number }>(
-      `SELECT COUNT(*) AS n FROM receipts WHERE client_id = ? AND status = 'review'`,
-      [c.id],
-    );
+    const sources = await listIncomeSources(c.id);
+    for (const s of sources) {
+      const filed = await getSubmission(s.id, quarter.key);
+      const posted = await one<{ n: number }>(
+        `SELECT COUNT(*) AS n FROM transactions
+          WHERE income_source_id = ? AND status IN ('auto','confirmed')
+            AND txn_date >= ? AND txn_date <= ?`,
+        [s.id, quarter.taxYearStart, quarter.periodEnd],
+      );
+      const review = await one<{ n: number }>(
+        `SELECT COUNT(*) AS n FROM transactions
+          WHERE income_source_id = ? AND status = 'review'`,
+        [s.id],
+      );
 
-    const txnCount = txn?.n ?? 0;
-    const reviewCount = rev?.n ?? 0;
+      let status: ObligationStatus;
+      let netProfit: number | null = null;
+      let filedRef: string | null = null;
 
-    let status: ObligationStatus;
-    let netVat: number | null = null;
-    let formBundle: string | null = null;
+      if (filed) {
+        status = "filed";
+        netProfit = filed.net_profit;
+        filedRef = filed.hmrc_receipt
+          ? (JSON.parse(filed.hmrc_receipt).transactionReference ?? null)
+          : null;
+      } else if ((posted?.n ?? 0) > 0) {
+        status = "ready";
+        const u = await computeQuarterlyUpdate(
+          s.id,
+          s.type,
+          s.annual_turnover,
+          quarter.taxYearStart,
+          quarter.periodEnd,
+        );
+        netProfit = u.netProfit;
+      } else {
+        status = "missing";
+      }
 
-    if (filed) {
-      status = "filed";
-      netVat = filed.box5;
-      formBundle = filed.hmrc_receipt
-        ? (JSON.parse(filed.hmrc_receipt).formBundleNumber ?? null)
-        : null;
-    } else if (txnCount > 0) {
-      status = "ready";
-      netVat = (await computeVatReturn(c.id, periodStart, periodEnd)).box5;
-    } else {
-      status = "missing";
+      out.push({
+        clientId: c.id,
+        clientName: c.name,
+        mandationStatus: c.mandation_status,
+        agentAuth: c.agent_auth_status,
+        sourceId: s.id,
+        businessName: s.business_name,
+        sourceType: s.type,
+        status,
+        reviewCount: review?.n ?? 0,
+        netProfit,
+        filedRef,
+      });
     }
-
-    out.push({
-      clientId: c.id,
-      clientName: c.name,
-      status,
-      txnCount,
-      reviewCount,
-      netVat,
-      formBundle,
-    });
   }
   return out;
 }

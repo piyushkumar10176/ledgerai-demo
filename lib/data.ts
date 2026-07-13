@@ -1,13 +1,17 @@
 import { one, many, run } from "./db";
-import { seedChartOfAccounts } from "./coa";
+import type { SourceType } from "./hmrc-categories";
 
 export interface Client {
   id: number;
   firm_id: number;
   name: string;
-  company_number: string | null;
-  vat_number: string | null;
-  vat_scheme: string;
+  nino: string | null;
+  utr: string | null;
+  dob: string | null;
+  mandation_status: string;
+  mandation_wave: string | null;
+  agent_auth_status: string;
+  phone: string | null;
   created_at: string;
 }
 
@@ -18,7 +22,6 @@ export function listClients(firmId: number): Promise<Client[]> {
   );
 }
 
-// Firm-scoped fetch: resolves to null if the client isn't in this firm.
 export async function getClient(
   firmId: number,
   clientId: number,
@@ -33,73 +36,74 @@ export async function getClient(
 
 export async function createClient(
   firmId: number,
-  name: string,
-  companyNumber: string | null,
-  vatNumber: string | null,
+  fields: { name: string; nino?: string; utr?: string; phone?: string },
 ): Promise<number> {
   const r = await run(
-    `INSERT INTO clients (firm_id, name, company_number, vat_number)
-     VALUES (?, ?, ?, ?)`,
-    [firmId, name.trim(), companyNumber?.trim() || null, vatNumber?.trim() || null],
+    `INSERT INTO clients (firm_id, name, nino, utr, phone)
+     VALUES (?, ?, ?, ?, ?)`,
+    [
+      firmId,
+      fields.name.trim(),
+      fields.nino?.trim() || null,
+      fields.utr?.trim() || null,
+      fields.phone?.trim() || null,
+    ],
   );
-  await seedChartOfAccounts(firmId, r.lastId); // every new client gets the COA
   return r.lastId;
 }
 
-export interface Account {
+export interface IncomeSource {
   id: number;
-  code: string;
-  name: string;
-  type: string;
-  vat_role: string | null;
-  is_category: number;
+  client_id: number;
+  type: SourceType;
+  business_name: string;
+  hmrc_business_id: string | null;
+  accounting_method: string;
+  annual_turnover: number;
 }
 
-export function listAccounts(clientId: number): Promise<Account[]> {
-  return many<Account>(
-    `SELECT * FROM accounts WHERE client_id = ? ORDER BY code`,
+export function listIncomeSources(clientId: number): Promise<IncomeSource[]> {
+  return many<IncomeSource>(
+    `SELECT * FROM income_sources WHERE client_id = ? ORDER BY id`,
     [clientId],
   );
 }
 
-export function listCategoryAccounts(clientId: number): Promise<Account[]> {
-  return many<Account>(
-    `SELECT * FROM accounts WHERE client_id = ? AND is_category = 1 ORDER BY code`,
-    [clientId],
-  );
-}
-
-export async function getAccountByCode(
-  clientId: number,
-  code: string,
-): Promise<Account | null> {
+export async function getIncomeSource(
+  firmId: number,
+  sourceId: number,
+): Promise<IncomeSource | null> {
   return (
-    (await one<Account>(
-      `SELECT * FROM accounts WHERE client_id = ? AND code = ?`,
-      [clientId, code],
+    (await one<IncomeSource>(
+      `SELECT * FROM income_sources WHERE id = ? AND firm_id = ?`,
+      [sourceId, firmId],
     )) ?? null
   );
 }
 
-export interface JournalEntryRow {
-  id: number;
-  entry_date: string;
-  description: string;
-  source: string;
-  total: number;
-}
-
-export function listJournalEntries(
+export async function createIncomeSource(
+  firmId: number,
   clientId: number,
-  limit = 100,
-): Promise<JournalEntryRow[]> {
-  return many<JournalEntryRow>(
-    `SELECT e.id, e.entry_date, e.description, e.source,
-            COALESCE((SELECT SUM(debit) FROM journal_lines WHERE entry_id = e.id), 0) AS total
-       FROM journal_entries e
-      WHERE e.client_id = ?
-      ORDER BY e.entry_date DESC, e.id DESC
-      LIMIT ?`,
-    [clientId, limit],
+  fields: {
+    type: SourceType;
+    businessName: string;
+    accountingMethod?: string;
+    annualTurnover?: number;
+  },
+): Promise<number> {
+  const r = await run(
+    `INSERT INTO income_sources
+       (firm_id, client_id, type, business_name, hmrc_business_id, accounting_method, annual_turnover)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [
+      firmId,
+      clientId,
+      fields.type,
+      fields.businessName.trim(),
+      "XBIS" + Math.floor(100000 + (clientId * 7 + firmId) * 13).toString(),
+      fields.accountingMethod || "cash",
+      fields.annualTurnover ?? 0,
+    ],
   );
+  return r.lastId;
 }
