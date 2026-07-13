@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -12,6 +12,7 @@ function I({ d, s = 2, size = 19, color = "currentColor" }: { d: string; s?: num
 }
 const ICONS = {
   dashboard: '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
+  clients: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/>',
   review: '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
   mandation: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>',
   hmrc: '<line x1="3" y1="22" x2="21" y2="22"/><line x1="6" y1="18" x2="6" y2="11"/><line x1="10" y1="18" x2="10" y2="11"/><line x1="14" y1="18" x2="14" y2="11"/><line x1="18" y1="18" x2="18" y2="11"/><path d="M12 2 2 8h20z"/>',
@@ -19,7 +20,8 @@ const ICONS = {
 };
 
 const NAV = [
-  { href: "/dashboard", label: "Dashboard", icon: ICONS.dashboard, match: (p: string) => p === "/dashboard" || p.startsWith("/clients") },
+  { href: "/dashboard", label: "Dashboard", icon: ICONS.dashboard, match: (p: string) => p === "/dashboard" },
+  { href: "/clients", label: "Clients", icon: ICONS.clients, match: (p: string) => p.startsWith("/clients") },
   { href: "/review", label: "Review queue", icon: ICONS.review, match: (p: string) => p.startsWith("/review") },
   { href: "/mandation", label: "Mandation", icon: ICONS.mandation, match: (p: string) => p.startsWith("/mandation") },
   { href: "/hmrc", label: "VAT & HMRC", icon: ICONS.hmrc, match: (p: string) => p.startsWith("/hmrc") },
@@ -30,6 +32,12 @@ export default function Chrome({ name, children }: { name: string; children: Rea
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [ai, setAi] = useState(false);
+
+  useEffect(() => {
+    const open = () => setAi(true);
+    window.addEventListener("ledgerai:copilot", open);
+    return () => window.removeEventListener("ledgerai:copilot", open);
+  }, []);
 
   const initials = name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 

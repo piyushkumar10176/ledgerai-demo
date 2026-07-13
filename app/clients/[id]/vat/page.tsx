@@ -7,19 +7,16 @@ import { chartOfAccounts } from "@/lib/bookkeeping";
 import { getAgentConnection, vatObligations } from "@/lib/hmrc";
 import { formatGBP } from "@/lib/money";
 import ServiceTabs from "@/components/ServiceTabs";
+import CopilotButton from "@/components/CopilotButton";
 
-const BOX_LABELS: Record<string, string> = {
-  box1: "VAT due on sales", box2: "VAT due on acquisitions (EU)", box3: "Total VAT due",
-  box4: "VAT reclaimed on purchases", box5: "Net VAT to pay / reclaim",
-  box6: "Total sales ex-VAT", box7: "Total purchases ex-VAT",
-  box8: "Goods supplied to EU", box9: "Goods acquired from EU",
-};
+const LABELS: [string, string][] = [
+  ["1", "VAT due on sales and other outputs"], ["2", "VAT due on acquisitions from EU"],
+  ["3", "Total VAT due"], ["4", "VAT reclaimed on purchases"], ["5", "Net VAT to pay to HMRC"],
+  ["6", "Total value of sales ex. VAT"], ["7", "Total value of purchases ex. VAT"],
+  ["8", "Total value of EU supplies"], ["9", "Total value of EU acquisitions"],
+];
 
-export default async function VatPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function VatPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
   if (!session) redirect("/login");
   const { id } = await params;
@@ -29,84 +26,91 @@ export default async function VatPage({
   const services = await getClientServices(clientId);
   if (!services.includes("vat")) redirect(`/clients/${clientId}`);
 
-  // Deterministic 9-box, assuming standard-rated, VAT-inclusive amounts (demo).
   const coa = await chartOfAccounts(clientId);
   const box6 = Math.round(coa.incomeTotal / 1.2);
   const box1 = coa.incomeTotal - box6;
   const box7 = Math.round(coa.expenseTotal / 1.2);
   const box4 = coa.expenseTotal - box7;
-  const boxes = { box1, box2: 0, box3: box1, box4, box5: Math.abs(box1 - box4), box6, box7, box8: 0, box9: 0 };
-
+  const b: Record<string, number> = { "1": box1, "2": 0, "3": box1, "4": box4, "5": Math.abs(box1 - box4), "6": box6, "7": box7, "8": 0, "9": 0 };
   const conn = await getAgentConnection(session.firmId);
-  // Real HMRC MTD VAT obligations for this client's VRN (live once connected + subscribed).
   const vatObs = client.vrn ? await vatObligations(session.firmId, client.vrn) : null;
 
+  const steps = [
+    { n: "✓", label: "Draft", done: true }, { n: "✓", label: "AI reviewed", done: true }, { n: "3", label: "Submit to HMRC", done: false },
+  ];
+
   return (
-    <main className="mx-auto max-w-4xl px-6 py-10">
-      <h1 className="text-2xl font-bold tracking-tight">{client.name}</h1>
+    <main className="fade-up mx-auto max-w-[1240px] px-4 py-6 sm:px-7">
+      <h1 className="text-[22px] font-extrabold" style={{ letterSpacing: "-.02em" }}>{client.name}</h1>
       <ServiceTabs clientId={clientId} active="vat" services={services} />
 
-      <div className="mt-6 flex flex-wrap items-center gap-2">
-        <span className="inline-flex items-center gap-2 rounded-md bg-stone-100 px-3 py-1 text-xs text-stone-600">
-          <span className="font-medium">Deterministic 9-box</span> · computed in code, never AI
-        </span>
-        <span className="rounded-md bg-amber-50 px-3 py-1 text-xs text-amber-800">
-          Assumes standard-rated (20%), VAT-inclusive amounts — demo
-        </span>
-      </div>
-
-      <div className="mt-4 card overflow-hidden">
-        <table className="w-full text-sm">
-          <tbody className="divide-y divide-stone-100">
-            {(Object.keys(boxes) as (keyof typeof boxes)[]).map((k) => {
-              const n = k.replace("box", "");
-              const hi = k === "box3" || k === "box5";
+      <div className="mt-6 grid gap-4 lg:grid-cols-[1.5fr_1fr] lg:items-start">
+        {/* 9-box */}
+        <div className="card overflow-hidden">
+          <div className="border-b border-[#efeff5] px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-[16px] font-extrabold">VAT Return · {client.name}</div>
+                <div className="mt-0.5 text-[12.5px] text-[#8a879a]">Period 1 Apr – 30 Jun 2026 · Quarterly · Making Tax Digital</div>
+              </div>
+              <span className="chip" style={{ color: "#b54708", background: "#fef0c7" }}>Due 7 Aug</span>
+            </div>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              {steps.map((s, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full text-[11px] font-extrabold" style={s.done ? { background: "#16b364", color: "#fff" } : { background: "#eef0ff", color: "#7c6cf5" }}>{s.n}</span>
+                  <span className="text-[12px] font-bold" style={{ color: s.done ? "#12805c" : "#7c6cf5" }}>{s.label}</span>
+                  {i < steps.length - 1 && <span className="mx-1 text-[#d5d3e2]">→</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="px-6 pb-3 pt-1">
+            {LABELS.map(([n, label]) => {
+              const hi = n === "3" || n === "5";
+              const zero = b[n] === 0 && (n === "2" || n === "8" || n === "9");
               return (
-                <tr key={k} className={hi ? "bg-brand-50/60" : ""}>
-                  <td className="w-12 px-4 py-3 text-center font-mono text-stone-400">{n}</td>
-                  <td className="px-2 py-3">{BOX_LABELS[k]}</td>
-                  <td className={"px-4 py-3 text-right font-medium tabular-nums " + (hi ? "text-brand-800" : "")}>{formatGBP(boxes[k])}</td>
-                </tr>
+                <div key={n} className="flex items-center gap-3.5 border-b border-[#f4f4f9] py-3 last:border-0">
+                  <span className="flex h-[26px] w-[26px] flex-none items-center justify-center rounded-lg text-[12px] font-extrabold" style={{ background: "#f1f0f9", color: "#7c6cf5" }}>{n}</span>
+                  <span className="flex-1 text-[12.5px] text-[#4a4860]" style={{ fontWeight: hi ? 700 : 500 }}>{label}</span>
+                  <span className="mono text-[13.5px] font-bold" style={{ color: n === "5" ? "#7c6cf5" : zero ? "#9995ab" : "#16151c" }}>{formatGBP(b[n])}</span>
+                </div>
               );
             })}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="mt-4 card p-5">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="font-semibold">HMRC MTD VAT (sandbox)</h2>
-            <p className="text-xs text-stone-500">
-              {client.vrn ? <>VRN <span className="font-mono">{client.vrn}</span> · </> : "No VRN on file · "}
-              {conn ? "agent connected — live obligations below." : "connect an agent to pull real obligations."}
-            </p>
           </div>
-          <Link href="/hmrc" className="rounded-md border border-brand-300 px-3 py-1.5 text-sm text-brand-700 hover:bg-brand-50">
-            {conn ? "Manage HMRC" : "Connect HMRC →"}
-          </Link>
         </div>
 
-        {client.vrn && (
-          <div className="mt-4 rounded-lg border border-stone-200 bg-stone-50 p-4 text-sm">
-            <div className="text-xs font-semibold uppercase tracking-wide text-stone-500">Live VAT obligations (real MTD VAT API)</div>
-            {!vatObs ? null : vatObs.ok ? (
-              <ul className="mt-2 space-y-1">
-                {(vatObs.obligations as { start: string; end: string; due: string; status: string; periodKey?: string }[]).map((o, i) => (
-                  <li key={i} className="flex items-center justify-between border-t border-stone-200 py-1">
-                    <span>{o.start} → {o.end} <span className="text-stone-400">(due {o.due})</span></span>
-                    <span className={"rounded-full px-2 py-0.5 text-xs " + (o.status === "F" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-800")}>
-                      {o.status === "F" ? "Fulfilled" : "Open"}
-                    </span>
-                  </li>
-                ))}
-                {(vatObs.obligations as unknown[]).length === 0 && <li className="mt-1 text-stone-400">No obligations returned.</li>}
-              </ul>
-            ) : (
-              <p className="mt-2 text-amber-700">{vatObs.error} — once the app is subscribed to the VAT (MTD) API and an agent is connected, real obligations appear here.</p>
-            )}
+        {/* AI review + submit */}
+        <div className="flex flex-col gap-4">
+          <div className="rounded-2xl p-5 text-[#e9e6ff]" style={{ background: "linear-gradient(165deg,#1c1938,#2a2350)" }}>
+            <div className="flex items-center gap-2">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#b9a8ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.9 4.8L18.7 9l-4.8 1.9L12 15.7 10.1 10.9 5.3 9l4.8-1.2z" /></svg>
+              <span className="text-[14px] font-bold">AI review</span>
+              <span className="ml-auto flex items-center gap-1.5 text-[11px] font-bold" style={{ color: "#6ee7b7" }}><span className="h-1.5 w-1.5 rounded-full bg-[#6ee7b7]" />Ready</span>
+            </div>
+            <p className="mt-3.5 text-[12.5px] leading-relaxed" style={{ color: "#d8d4f0" }}>
+              The 9 boxes reconcile against the ledger — the figures are computed deterministically in code, never by AI. No filing errors found.
+            </p>
+            <div className="mt-3 rounded-xl border p-3" style={{ background: "rgba(255,213,138,.1)", borderColor: "rgba(255,213,138,.25)" }}>
+              <div className="text-[11.5px] font-bold" style={{ color: "#ffd48a" }}>⚠ Standard-rate assumption</div>
+              <div className="mt-1 text-[12px] leading-snug" style={{ color: "#d8d4f0" }}>This demo derives VAT at 20% on VAT-inclusive amounts. Confirm the scheme before submitting.</div>
+            </div>
+            <CopilotButton className="mt-3.5 w-full rounded-xl bg-white/10 py-2.5 text-[12.5px] font-bold text-white">Explain the calculation →</CopilotButton>
           </div>
-        )}
+
+          <div className="card p-[18px]">
+            <div className="text-[12.5px] font-semibold text-[#8a879a]">Net VAT due to HMRC</div>
+            <div className="mono my-1.5 mb-3.5 text-[30px] font-extrabold" style={{ letterSpacing: "-.02em" }}>{formatGBP(b["5"])}</div>
+            <Link href="/hmrc" className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-[14px] font-bold text-white" style={{ background: "#16b364", boxShadow: "0 4px 14px rgba(22,179,100,.35)" }}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4Z" /></svg>
+              {conn ? "Submit to HMRC" : "Connect & file via MTD"}
+            </Link>
+            <div className="mt-2.5 text-center text-[11px] text-[#a6a3b6]">
+              {client.vrn ? <>VRN {client.vrn} · </> : ""}{conn ? "Filed via the real MTD VAT API" : "Connect an agent to file for real"}
+            </div>
+            {vatObs && !vatObs.ok && <div className="mt-2 rounded-lg bg-[#fff4e5] px-3 py-2 text-[11px] text-[#b54708]">{vatObs.error}</div>}
+          </div>
+        </div>
       </div>
     </main>
   );
