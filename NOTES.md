@@ -3,6 +3,19 @@
 **Status:** live demo · **Started:** 2026-07-11
 **What this is:** a demo of the LedgerAI UK **MTD Income Tax** flow end-to-end. Not production.
 **Live:** https://ledger-uk.vercel.app · login `demo@ledgerai.test` / `demo1234`
+
+## Services (per client) + real HMRC sandbox
+Each client selects services — **Bookkeeping · VAT · MTD Income Tax · Payroll** — and only the
+selected ones appear as **tabs** on the client (Overview + selected services + Services settings).
+- **Bookkeeping** — chart of accounts (click an account → its ledger) + P&L.
+- **VAT** — deterministic 9-box (standard-rate assumption, demo) + HMRC connect.
+- **MTD IT** — income sources → quarterly cumulative updates (the main flow).
+- **Payroll** — placeholder (PRD: integrate, don't build) + UK calc explainer.
+- **Review queue** — cross-client, multi-select **bulk accept/reject**.
+- **HMRC** (`/hmrc`) — **real sandbox**: client_credentials app token (works live), OAuth
+  auth-code flow + fraud-prevention headers. Needs Dev Hub config (subscribe APIs, add redirect
+  URI `…/api/hmrc/callback`, create test users) for user-restricted VAT/ITSA calls.
+- HMRC creds live in Vercel env + gitignored `.env.local` (never committed; rotate recommended).
 **Demo clients:** Priya Shah (filed), Aisha Khan (filed), Tom Fletcher (ready to file, £10,080),
 Sam Rivers (missing — the hands-on client). 2 exceptions sit in the cross-client review queue.
 > VAT 9-box + double-entry ledger were the earlier build; moved to Phase 2 (in git history).
