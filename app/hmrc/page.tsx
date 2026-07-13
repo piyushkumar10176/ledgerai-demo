@@ -39,6 +39,16 @@ export default async function HmrcPage({
           className="mt-3 inline-block rounded-md bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-indigo-700">
           Connect to HMRC (sandbox)
         </a>
+        {process.env.HMRC_TEST_USER_ID && (
+          <div className="mt-4 rounded-lg bg-slate-50 p-4 text-sm">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Authorise with this sandbox test user</div>
+            <div className="mt-1 font-mono text-slate-700">
+              User ID: {process.env.HMRC_TEST_USER_ID}<br />
+              Password: {process.env.HMRC_TEST_USER_PASSWORD}
+            </div>
+            <p className="mt-1 text-xs text-slate-400">Fay Ingham · VRN 466677396 · these are entered on HMRC&apos;s sandbox sign-in during Connect.</p>
+          </div>
+        )}
       </div>
 
       <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50/60 p-5 text-sm">

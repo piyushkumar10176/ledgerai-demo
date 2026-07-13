@@ -12,6 +12,8 @@ export interface Client {
   mandation_wave: string | null;
   agent_auth_status: string;
   phone: string | null;
+  vrn: string | null;
+  mtd_it_id: string | null;
   created_at: string;
 }
 

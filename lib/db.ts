@@ -150,6 +150,19 @@ async function build(): Promise<Client> {
     process.env.TURSO_AUTH_TOKEN || process.env.LIBSQL_AUTH_TOKEN;
   const client = createClient({ url, authToken, intMode: "number" });
   await client.executeMultiple(SCHEMA);
+  // Idempotent additive migrations (SQLite has no ADD COLUMN IF NOT EXISTS;
+  // a duplicate-column error just means it already ran).
+  const MIGRATIONS = [
+    "ALTER TABLE clients ADD COLUMN vrn TEXT",
+    "ALTER TABLE clients ADD COLUMN mtd_it_id TEXT",
+  ];
+  for (const sql of MIGRATIONS) {
+    try {
+      await client.execute(sql);
+    } catch {
+      /* column already exists */
+    }
+  }
   return client;
 }
 

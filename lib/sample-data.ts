@@ -20,6 +20,8 @@ interface SampleClient {
   txns: TxnSpec[];
   submitQ1: boolean;
   services: string[];
+  vrn?: string;
+  mtdItId?: string;
 }
 
 const SAMPLES: SampleClient[] = [
@@ -79,6 +81,24 @@ const SAMPLES: SampleClient[] = [
     submitQ1: false,
     services: ["bookkeeping", "mtd-itsa"],
   },
+  {
+    // Real HMRC SANDBOX test user — VRN/NINO/UTR/MTD-IT-ID are live sandbox IDs.
+    name: "Fay Ingham",
+    nino: "BY918335C", utr: "6334720476", phone: "07700 900555",
+    mandation: { status: "mandated", wave: "2026" }, agentAuth: "linked",
+    vrn: "466677396", mtdItId: "XTIT00002270770",
+    source: { type: "self-employment", businessName: "Ingham Trading", turnover: 8_000_000 },
+    txns: [
+      { date: "2026-04-18", desc: "Card settlement", signed: 420000 },
+      { date: "2026-05-22", desc: "Invoice - consultancy", signed: 360000 },
+      { date: "2026-04-24", desc: "Wickes materials", signed: -96000 },
+      { date: "2026-05-09", desc: "Shell fuel", signed: -18000 },
+      { date: "2026-06-02", desc: "Accountant fee", signed: -36000 },
+      { date: "2026-06-16", desc: "Premier Stores", signed: -3600 }, // low conf -> review
+    ],
+    submitQ1: false, // ready to file
+    services: ["bookkeeping", "vat", "mtd-itsa"],
+  },
 ];
 
 export async function seedSampleData(firmId: number): Promise<void> {
@@ -90,9 +110,9 @@ export async function seedSampleData(firmId: number): Promise<void> {
     let clientId: number;
     if (!client) {
       const r = await run(
-        `INSERT INTO clients (firm_id, name, nino, utr, phone, mandation_status, mandation_wave, agent_auth_status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [firmId, spec.name, spec.nino, spec.utr, spec.phone, spec.mandation.status, spec.mandation.wave, spec.agentAuth],
+        `INSERT INTO clients (firm_id, name, nino, utr, phone, mandation_status, mandation_wave, agent_auth_status, vrn, mtd_it_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [firmId, spec.name, spec.nino, spec.utr, spec.phone, spec.mandation.status, spec.mandation.wave, spec.agentAuth, spec.vrn ?? null, spec.mtdItId ?? null],
       );
       clientId = r.lastId;
     } else {

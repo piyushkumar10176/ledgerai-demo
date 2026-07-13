@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth";
 import { getClient } from "@/lib/data";
 import { getClientServices } from "@/lib/services";
 import { chartOfAccounts } from "@/lib/bookkeeping";
-import { getAgentConnection } from "@/lib/hmrc";
+import { getAgentConnection, vatObligations } from "@/lib/hmrc";
 import { formatGBP } from "@/lib/money";
 import ServiceTabs from "@/components/ServiceTabs";
 
@@ -38,6 +38,8 @@ export default async function VatPage({
   const boxes = { box1, box2: 0, box3: box1, box4, box5: Math.abs(box1 - box4), box6, box7, box8: 0, box9: 0 };
 
   const conn = await getAgentConnection(session.firmId);
+  // Real HMRC MTD VAT obligations for this client's VRN (live once connected + subscribed).
+  const vatObs = client.vrn ? await vatObligations(session.firmId, client.vrn) : null;
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-10">
@@ -76,13 +78,35 @@ export default async function VatPage({
           <div>
             <h2 className="font-semibold">HMRC MTD VAT (sandbox)</h2>
             <p className="text-xs text-slate-500">
-              {conn ? "Agent connected. Obligations/submission via the real MTD VAT API." : "Not connected — real obligations & submission need an HMRC agent connection."}
+              {client.vrn ? <>VRN <span className="font-mono">{client.vrn}</span> · </> : "No VRN on file · "}
+              {conn ? "agent connected — live obligations below." : "connect an agent to pull real obligations."}
             </p>
           </div>
           <Link href="/hmrc" className="rounded-md border border-indigo-300 px-3 py-1.5 text-sm text-indigo-700 hover:bg-indigo-50">
             {conn ? "Manage HMRC" : "Connect HMRC →"}
           </Link>
         </div>
+
+        {client.vrn && (
+          <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Live VAT obligations (real MTD VAT API)</div>
+            {!vatObs ? null : vatObs.ok ? (
+              <ul className="mt-2 space-y-1">
+                {(vatObs.obligations as { start: string; end: string; due: string; status: string; periodKey?: string }[]).map((o, i) => (
+                  <li key={i} className="flex items-center justify-between border-t border-slate-200 py-1">
+                    <span>{o.start} → {o.end} <span className="text-slate-400">(due {o.due})</span></span>
+                    <span className={"rounded-full px-2 py-0.5 text-xs " + (o.status === "F" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-800")}>
+                      {o.status === "F" ? "Fulfilled" : "Open"}
+                    </span>
+                  </li>
+                ))}
+                {(vatObs.obligations as unknown[]).length === 0 && <li className="mt-1 text-slate-400">No obligations returned.</li>}
+              </ul>
+            ) : (
+              <p className="mt-2 text-amber-700">{vatObs.error} — once the app is subscribed to the VAT (MTD) API and an agent is connected, real obligations appear here.</p>
+            )}
+          </div>
+        )}
       </div>
     </main>
   );
