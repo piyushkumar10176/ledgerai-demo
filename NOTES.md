@@ -1,17 +1,32 @@
 # LedgerAI UK — Demo Prototype · NOTES
 
-**Status:** in progress · **Started:** 2026-07-11
-**What this is:** a SIMPLE demo that proves the core LedgerAI UK flow end-to-end. Not production.
+**Status:** live demo · **Started:** 2026-07-11
+**What this is:** a demo of the LedgerAI UK **MTD Income Tax** flow end-to-end. Not production.
+**Live:** https://ledger-uk.vercel.app · login `demo@ledgerai.test` / `demo1234`
+**Demo clients:** Priya Shah (filed), Aisha Khan (filed), Tom Fletcher (ready to file, £10,080),
+Sam Rivers (missing — the hands-on client). 2 exceptions sit in the cross-client review queue.
+> VAT 9-box + double-entry ledger were the earlier build; moved to Phase 2 (in git history).
 
 ---
 
-## The flow this demo proves
-1. Firm user logs in (simple session auth).
-2. Add a client (manual entry).
-3. Correct double-entry ledger + chart of accounts.
-4. Import a bank statement via CSV → see transactions.
-5. Upload a receipt → OCR + AI categorisation → confidence score → below threshold goes to a review queue.
-6. Generate a VAT return (9-box) with a **deterministic in-code calculation** → "Submit to HMRC" (mocked) → fake receipt.
+## What this proves — MTD for Income Tax (PRD v2 aligned)
+The demo now follows PRD v2: **MTD Income-Tax-first** (VAT moved to Phase 2, preserved
+in git history). The six-stage workflow (§6): **Onboard → Collect → Process → Review → File → Monitor**.
+
+1. **Onboard** — add a client (NINO/UTR), add income sources (self-employment / UK property);
+   **mandation checker** (mock HMRC ITSA status) buckets clients into MTD waves.
+2. **Collect** — **magic-link** page: the client uploads a bank CSV / receipt with **no login**
+   (public token page). Automated chasing is a mock button.
+3. **Process** — bank CSV + receipts are categorised into **HMRC categories** by mock AI with a
+   confidence score; ≥80% auto-applies, below → review.
+4. **Review** — **one cross-client exception queue**: only low-confidence items surface; confirm/override/reject.
+5. **File** — **deterministic cumulative quarterly update** per income source (consolidated < £90k,
+   else full SA103 categories), mock HMRC submit + receipt, mock in-year tax estimate.
+6. **Monitor** — **obligations control tower**: every client × income source, RAG (missing/ready/filed),
+   deadline countdown, exceptions, **bulk-file** + one-click chase.
+
+Digital records are **single-entry** (date / amount / HMRC category) per PRD §8 — no double-entry ledger.
+Quarterly figures are summed in code (deterministic); **AI never produces a tax figure**.
 
 ---
 
