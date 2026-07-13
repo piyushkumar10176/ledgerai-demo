@@ -24,7 +24,7 @@ export default async function ServicesPage({
       <ServiceTabs clientId={clientId} active="services" services={services} />
       <div className="mt-6 max-w-3xl">
         <h2 className="font-semibold">Which services does this client use?</h2>
-        <p className="text-sm text-slate-500">Only the selected services appear as tabs for this client. A client can use any combination.</p>
+        <p className="text-sm text-stone-500">Only the selected services appear as tabs for this client. A client can use any combination.</p>
         <div className="mt-4">
           <ServicesPicker
             clientId={clientId}

@@ -11,11 +11,11 @@ export default async function LoginPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6">
       <h1 className="text-3xl font-bold tracking-tight">
-        Ledger<span className="text-indigo-600">AI</span> UK
+        Ledger<span className="text-brand-600">AI</span> UK
       </h1>
-      <p className="mt-1 text-slate-500">Sign in to the demo practice.</p>
+      <p className="mt-1 text-stone-500">Sign in to the demo practice.</p>
 
-      <div className="mt-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="mt-8 rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
         <LoginForm demoEmail={DEMO_EMAIL} demoPassword={DEMO_PASSWORD} />
       </div>
 

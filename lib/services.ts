@@ -30,7 +30,7 @@ export const SERVICES: ServiceDef[] = [
   {
     key: "mtd-itsa", label: "MTD Income Tax", short: "MTD IT",
     desc: "Quarterly cumulative updates per income source.",
-    accent: "text-indigo-700", chip: "bg-indigo-100 text-indigo-700", dot: "bg-indigo-500",
+    accent: "text-brand-700", chip: "bg-brand-100 text-brand-700", dot: "bg-brand-500",
     emoji: "📈", href: "mtd",
   },
   {

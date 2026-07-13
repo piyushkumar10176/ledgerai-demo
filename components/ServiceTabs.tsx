@@ -24,7 +24,7 @@ export default function ServiceTabs({
   ];
 
   return (
-    <nav className="mt-5 flex flex-wrap gap-1 border-b border-slate-200">
+    <nav className="mt-5 flex flex-wrap gap-1 border-b border-stone-200">
       {tabs.map((t) => {
         const on = t.key === active;
         return (
@@ -34,8 +34,8 @@ export default function ServiceTabs({
             className={
               "flex items-center gap-1.5 border-b-2 px-4 py-2.5 text-sm transition " +
               (on
-                ? "border-indigo-600 font-semibold text-indigo-700"
-                : "border-transparent text-slate-500 hover:text-slate-800")
+                ? "border-brand-600 font-semibold text-brand-700"
+                : "border-transparent text-stone-500 hover:text-stone-800")
             }
           >
             <span className="text-xs">{t.emoji}</span>

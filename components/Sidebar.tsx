@@ -25,7 +25,7 @@ export default function Sidebar({ name }: { name: string }) {
         <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-lg font-black text-white">L</span>
         <div className="leading-tight">
           <div className="text-sm font-bold text-white">LedgerAI <span className="text-brand-300">UK</span></div>
-          <div className="text-[10px] uppercase tracking-widest text-slate-400">MTD · demo</div>
+          <div className="text-[10px] uppercase tracking-widest text-stone-400">MTD · demo</div>
         </div>
       </Link>
       <nav className="flex-1 space-y-1">
@@ -38,9 +38,9 @@ export default function Sidebar({ name }: { name: string }) {
       </nav>
       <div className="mt-4 rounded-xl bg-white/5 p-3">
         <div className="text-xs font-medium text-white">{name}</div>
-        <div className="text-[11px] text-slate-400">Demo Accountants</div>
+        <div className="text-[11px] text-stone-400">Demo Accountants</div>
         <form action="/api/auth/logout" method="post" className="mt-2">
-          <button className="w-full rounded-lg border border-white/10 px-3 py-1.5 text-xs text-slate-300 hover:bg-white/5 hover:text-white">
+          <button className="w-full rounded-lg border border-white/10 px-3 py-1.5 text-xs text-stone-300 hover:bg-white/5 hover:text-white">
             Log out
           </button>
         </form>
@@ -51,12 +51,12 @@ export default function Sidebar({ name }: { name: string }) {
   return (
     <>
       {/* Mobile top bar */}
-      <div className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white/80 px-4 py-3 backdrop-blur lg:hidden">
+      <div className="sticky top-0 z-30 flex items-center justify-between border-b border-stone-200 bg-white/80 px-4 py-3 backdrop-blur lg:hidden">
         <Link href="/dashboard" className="flex items-center gap-2">
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-sm font-black text-white">L</span>
           <span className="text-sm font-bold">LedgerAI <span className="text-brand-600">UK</span></span>
         </Link>
-        <button onClick={() => setOpen(true)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm">☰ Menu</button>
+        <button onClick={() => setOpen(true)} className="rounded-lg border border-stone-200 px-3 py-1.5 text-sm">☰ Menu</button>
       </div>
 
       {/* Desktop fixed sidebar */}

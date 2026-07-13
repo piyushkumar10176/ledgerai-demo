@@ -38,21 +38,21 @@ export default function ServicesPicker({
           return (
             <button key={s.key} onClick={() => toggle(s.key)}
               className={"flex items-center gap-3 rounded-2xl border p-4 text-left transition " +
-                (on ? "border-indigo-400 bg-indigo-50/50 ring-1 ring-indigo-200" : "border-slate-200 bg-white hover:bg-slate-50")}>
+                (on ? "border-brand-400 bg-brand-50/50 ring-1 ring-brand-200" : "border-stone-200 bg-white hover:bg-stone-50")}>
               <span className={"flex h-10 w-10 items-center justify-center rounded-xl text-lg " + s.chip}>{s.emoji}</span>
               <div className="flex-1">
                 <div className="font-semibold">{s.label}</div>
-                <div className="text-xs text-slate-500">{s.desc}</div>
+                <div className="text-xs text-stone-500">{s.desc}</div>
               </div>
               <span className={"flex h-5 w-5 items-center justify-center rounded-full border text-xs " +
-                (on ? "border-indigo-600 bg-indigo-600 text-white" : "border-slate-300 text-transparent")}>✓</span>
+                (on ? "border-brand-600 bg-brand-600 text-white" : "border-stone-300 text-transparent")}>✓</span>
             </button>
           );
         })}
       </div>
       <div className="mt-4 flex items-center gap-3">
         <button onClick={save} disabled={busy}
-          className="rounded-md bg-indigo-600 px-5 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+          className="rounded-md bg-brand-600 px-5 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50">
           {busy ? "Saving…" : "Save services"}
         </button>
         {saved && <span className="text-sm text-green-600">Saved ✓ — only these tabs now show.</span>}

@@ -30,22 +30,22 @@ export default function QuarterlySubmit({
           ✓ Submitted to HMRC <span className="rounded-full bg-amber-200 px-2 py-0.5 text-xs font-medium text-amber-900">MOCK</span>
         </div>
         <dl className="mt-3 grid gap-1 text-sm sm:grid-cols-2">
-          <div><dt className="text-slate-500">Transaction reference</dt><dd className="font-mono">{receipt.transactionReference}</dd></div>
-          <div><dt className="text-slate-500">Period</dt><dd className="font-mono">{receipt.periodKey}</dd></div>
-          <div className="sm:col-span-2"><dt className="text-slate-500">Processing date</dt><dd className="font-mono">{receipt.processingDate}</dd></div>
+          <div><dt className="text-stone-500">Transaction reference</dt><dd className="font-mono">{receipt.transactionReference}</dd></div>
+          <div><dt className="text-stone-500">Period</dt><dd className="font-mono">{receipt.periodKey}</dd></div>
+          <div className="sm:col-span-2"><dt className="text-stone-500">Processing date</dt><dd className="font-mono">{receipt.processingDate}</dd></div>
         </dl>
         <p className="mt-2 text-xs text-amber-800">{receipt.note}</p>
       </div>
     );
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-      <p className="text-sm text-slate-600">
+    <div className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
+      <p className="text-sm text-stone-600">
         Cumulative YTD figures from the deterministic engine — no AI produces any number.
         The accountant approves, then submits.{alreadyFiled ? " A submission already exists; submitting again supersedes it (cumulative)." : ""}
       </p>
       <button onClick={submit} disabled={busy}
-        className="mt-3 rounded-md bg-indigo-600 px-5 py-2.5 font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+        className="mt-3 rounded-md bg-brand-600 px-5 py-2.5 font-medium text-white hover:bg-brand-700 disabled:opacity-50">
         {busy ? "Submitting…" : alreadyFiled ? "Re-submit quarterly update (mock)" : "Submit quarterly update to HMRC (mock)"}
       </button>
     </div>

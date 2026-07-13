@@ -36,16 +36,16 @@ export default async function MtdPage({
             className="card card-hover flex items-center justify-between p-4">
             <div>
               <div className="font-medium">{s.business_name}</div>
-              <div className="text-xs text-slate-400">
+              <div className="text-xs text-stone-400">
                 {s.type === "self-employment" ? "Self-employment" : "UK property"} · {s.accounting_method} basis ·
                 turnover {formatGBP(s.annual_turnover)} ({s.annual_turnover < 9_000_000 ? "consolidated" : "full categories"})
               </div>
             </div>
-            <span className="text-sm text-indigo-600">Open workspace →</span>
+            <span className="text-sm text-brand-600">Open workspace →</span>
           </Link>
         ))}
         {sources.length === 0 && (
-          <p className="rounded-xl border border-dashed border-slate-200 p-4 text-sm text-slate-400">
+          <p className="rounded-xl border border-dashed border-stone-200 p-4 text-sm text-stone-400">
             No income sources yet — add one to collect and file quarterly updates.
           </p>
         )}

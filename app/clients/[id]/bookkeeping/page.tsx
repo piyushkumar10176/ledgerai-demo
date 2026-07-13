@@ -30,11 +30,11 @@ export default async function BookkeepingPage({
 
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
         <Stat label="Income" value={formatGBP(coa.incomeTotal)} accent="text-green-700" />
-        <Stat label="Expenses" value={formatGBP(coa.expenseTotal)} accent="text-slate-700" />
-        <Stat label="Net profit" value={formatGBP(coa.netProfit)} accent="text-indigo-700" highlight />
+        <Stat label="Expenses" value={formatGBP(coa.expenseTotal)} accent="text-stone-700" />
+        <Stat label="Net profit" value={formatGBP(coa.netProfit)} accent="text-brand-700" highlight />
       </div>
 
-      <p className="mt-6 text-xs text-slate-400">Chart of accounts — click any account to see its transactions.</p>
+      <p className="mt-6 text-xs text-stone-400">Chart of accounts — click any account to see its transactions.</p>
       <div className="mt-2 grid gap-4 lg:grid-cols-2">
         <AccountList title="Income" accounts={coa.income} clientId={clientId} empty="No income posted." />
         <AccountList title="Expenses" accounts={coa.expenses} clientId={clientId} empty="No expenses posted." />
@@ -45,8 +45,8 @@ export default async function BookkeepingPage({
 
 function Stat({ label, value, accent, highlight }: { label: string; value: string; accent: string; highlight?: boolean }) {
   return (
-    <div className={"card p-5 " + (highlight ? "ring-1 ring-indigo-200" : "")}>
-      <div className="text-xs uppercase tracking-wide text-slate-500">{label}</div>
+    <div className={"card p-5 " + (highlight ? "ring-1 ring-brand-200" : "")}>
+      <div className="text-xs uppercase tracking-wide text-stone-500">{label}</div>
       <div className={"mt-1 text-2xl font-bold tabular-nums " + accent}>{value}</div>
     </div>
   );
@@ -57,21 +57,21 @@ function AccountList({ title, accounts, clientId, empty }: {
 }) {
   return (
     <div className="card overflow-hidden">
-      <div className="border-b border-slate-100 bg-slate-50 px-5 py-2.5 text-xs font-semibold uppercase tracking-wide text-slate-500">{title}</div>
-      <ul className="divide-y divide-slate-100">
+      <div className="border-b border-stone-100 bg-stone-50 px-5 py-2.5 text-xs font-semibold uppercase tracking-wide text-stone-500">{title}</div>
+      <ul className="divide-y divide-stone-100">
         {accounts.map((a) => (
           <li key={a.category}>
             <Link href={`/clients/${clientId}/bookkeeping/${a.category}`}
-              className="flex items-center justify-between px-5 py-3 text-sm transition hover:bg-slate-50">
+              className="flex items-center justify-between px-5 py-3 text-sm transition hover:bg-stone-50">
               <span className="flex items-center gap-2">
-                <span className="text-slate-800">{a.label}</span>
-                <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">{a.count}</span>
+                <span className="text-stone-800">{a.label}</span>
+                <span className="rounded-full bg-stone-100 px-1.5 py-0.5 text-[10px] text-stone-500">{a.count}</span>
               </span>
-              <span className="flex items-center gap-2 font-medium tabular-nums">{formatGBP(a.balance)}<span className="text-slate-300">→</span></span>
+              <span className="flex items-center gap-2 font-medium tabular-nums">{formatGBP(a.balance)}<span className="text-stone-300">→</span></span>
             </Link>
           </li>
         ))}
-        {accounts.length === 0 && <li className="px-5 py-6 text-center text-sm text-slate-400">{empty}</li>}
+        {accounts.length === 0 && <li className="px-5 py-6 text-center text-sm text-stone-400">{empty}</li>}
       </ul>
     </div>
   );

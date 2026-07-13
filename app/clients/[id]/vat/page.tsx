@@ -47,7 +47,7 @@ export default async function VatPage({
       <ServiceTabs clientId={clientId} active="vat" services={services} />
 
       <div className="mt-6 flex flex-wrap items-center gap-2">
-        <span className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-1 text-xs text-slate-600">
+        <span className="inline-flex items-center gap-2 rounded-md bg-stone-100 px-3 py-1 text-xs text-stone-600">
           <span className="font-medium">Deterministic 9-box</span> · computed in code, never AI
         </span>
         <span className="rounded-md bg-amber-50 px-3 py-1 text-xs text-amber-800">
@@ -57,15 +57,15 @@ export default async function VatPage({
 
       <div className="mt-4 card overflow-hidden">
         <table className="w-full text-sm">
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-stone-100">
             {(Object.keys(boxes) as (keyof typeof boxes)[]).map((k) => {
               const n = k.replace("box", "");
               const hi = k === "box3" || k === "box5";
               return (
-                <tr key={k} className={hi ? "bg-indigo-50/60" : ""}>
-                  <td className="w-12 px-4 py-3 text-center font-mono text-slate-400">{n}</td>
+                <tr key={k} className={hi ? "bg-brand-50/60" : ""}>
+                  <td className="w-12 px-4 py-3 text-center font-mono text-stone-400">{n}</td>
                   <td className="px-2 py-3">{BOX_LABELS[k]}</td>
-                  <td className={"px-4 py-3 text-right font-medium tabular-nums " + (hi ? "text-indigo-800" : "")}>{formatGBP(boxes[k])}</td>
+                  <td className={"px-4 py-3 text-right font-medium tabular-nums " + (hi ? "text-brand-800" : "")}>{formatGBP(boxes[k])}</td>
                 </tr>
               );
             })}
@@ -77,30 +77,30 @@ export default async function VatPage({
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-semibold">HMRC MTD VAT (sandbox)</h2>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-stone-500">
               {client.vrn ? <>VRN <span className="font-mono">{client.vrn}</span> · </> : "No VRN on file · "}
               {conn ? "agent connected — live obligations below." : "connect an agent to pull real obligations."}
             </p>
           </div>
-          <Link href="/hmrc" className="rounded-md border border-indigo-300 px-3 py-1.5 text-sm text-indigo-700 hover:bg-indigo-50">
+          <Link href="/hmrc" className="rounded-md border border-brand-300 px-3 py-1.5 text-sm text-brand-700 hover:bg-brand-50">
             {conn ? "Manage HMRC" : "Connect HMRC →"}
           </Link>
         </div>
 
         {client.vrn && (
-          <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm">
-            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Live VAT obligations (real MTD VAT API)</div>
+          <div className="mt-4 rounded-lg border border-stone-200 bg-stone-50 p-4 text-sm">
+            <div className="text-xs font-semibold uppercase tracking-wide text-stone-500">Live VAT obligations (real MTD VAT API)</div>
             {!vatObs ? null : vatObs.ok ? (
               <ul className="mt-2 space-y-1">
                 {(vatObs.obligations as { start: string; end: string; due: string; status: string; periodKey?: string }[]).map((o, i) => (
-                  <li key={i} className="flex items-center justify-between border-t border-slate-200 py-1">
-                    <span>{o.start} → {o.end} <span className="text-slate-400">(due {o.due})</span></span>
+                  <li key={i} className="flex items-center justify-between border-t border-stone-200 py-1">
+                    <span>{o.start} → {o.end} <span className="text-stone-400">(due {o.due})</span></span>
                     <span className={"rounded-full px-2 py-0.5 text-xs " + (o.status === "F" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-800")}>
                       {o.status === "F" ? "Fulfilled" : "Open"}
                     </span>
                   </li>
                 ))}
-                {(vatObs.obligations as unknown[]).length === 0 && <li className="mt-1 text-slate-400">No obligations returned.</li>}
+                {(vatObs.obligations as unknown[]).length === 0 && <li className="mt-1 text-stone-400">No obligations returned.</li>}
               </ul>
             ) : (
               <p className="mt-2 text-amber-700">{vatObs.error} — once the app is subscribed to the VAT (MTD) API and an agent is connected, real obligations appear here.</p>

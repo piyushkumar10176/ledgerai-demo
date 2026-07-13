@@ -44,21 +44,21 @@ export default function SourceWorkspace({
 
   return (
     <div className="space-y-6">
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
         <h2 className="font-semibold">Collect + process</h2>
-        <p className="text-xs text-slate-500">Bank CSV & receipts are categorised into HMRC categories by mock AI (confidence-scored). ≥80% auto-applies; below goes to review.</p>
+        <p className="text-xs text-stone-500">Bank CSV & receipts are categorised into HMRC categories by mock AI (confidence-scored). ≥80% auto-applies; below goes to review.</p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <button onClick={() => post("/api/transactions/import", { clientId, sourceId, sample: true })} disabled={busy}
-            className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">Load sample bank CSV</button>
-          <label className="cursor-pointer rounded-md border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50">
+            className="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50">Load sample bank CSV</button>
+          <label className="cursor-pointer rounded-md border border-stone-300 px-3 py-1.5 text-sm hover:bg-stone-50">
             Upload CSV<input type="file" accept=".csv" onChange={importFile} className="hidden" /></label>
-          <span className="text-slate-300">·</span>
+          <span className="text-stone-300">·</span>
           {scenarios.map((s) => (
             <button key={s.key} onClick={() => post("/api/transactions/receipt", { clientId, sourceId, scenario: s.key })} disabled={busy}
-              className="rounded-md border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50">{s.label}</button>
+              className="rounded-md border border-stone-300 px-3 py-1.5 text-sm hover:bg-stone-50">{s.label}</button>
           ))}
         </div>
-        {msg && <p className="mt-2 text-sm text-slate-600">{msg}</p>}
+        {msg && <p className="mt-2 text-sm text-stone-600">{msg}</p>}
       </section>
 
       {review.length > 0 && (
@@ -70,16 +70,16 @@ export default function SourceWorkspace({
         </section>
       )}
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
         <h2 className="font-semibold">Transactions ({transactions.length})</h2>
         <table className="mt-3 w-full text-sm">
-          <thead className="text-left text-xs uppercase text-slate-400">
+          <thead className="text-left text-xs uppercase text-stone-400">
             <tr><th className="py-1">Date</th><th className="py-1">Description</th><th className="py-1">Category</th><th className="py-1 text-right">Amount</th><th className="py-1">Status</th></tr>
           </thead>
           <tbody>
             {transactions.map((t) => (
-              <tr key={t.id} className="border-t border-slate-100">
-                <td className="py-1 text-slate-500">{t.txn_date}</td>
+              <tr key={t.id} className="border-t border-stone-100">
+                <td className="py-1 text-stone-500">{t.txn_date}</td>
                 <td className="py-1">{t.description}</td>
                 <td className="py-1">{t.category ? (catLabels[t.category] ?? t.category) : "—"}</td>
                 <td className={"py-1 text-right tabular-nums " + (t.direction === "income" ? "text-green-700" : "")}>
@@ -88,7 +88,7 @@ export default function SourceWorkspace({
                 <td className="py-1"><StatusBadge status={t.status} conf={t.confidence} /></td>
               </tr>
             ))}
-            {transactions.length === 0 && <tr><td colSpan={5} className="py-4 text-center text-slate-400">No transactions yet.</td></tr>}
+            {transactions.length === 0 && <tr><td colSpan={5} className="py-4 text-center text-stone-400">No transactions yet.</td></tr>}
           </tbody>
         </table>
       </section>
@@ -102,7 +102,7 @@ function StatusBadge({ status, conf }: { status: string; conf: number | null }) 
     review: "bg-amber-100 text-amber-800", rejected: "bg-red-100 text-red-700",
   };
   const label = status === "auto" ? `Auto ${conf ? Math.round(conf * 100) + "%" : ""}` : status;
-  return <span className={"rounded-full px-2 py-0.5 text-xs " + (map[status] ?? "bg-slate-100")}>{label}</span>;
+  return <span className={"rounded-full px-2 py-0.5 text-xs " + (map[status] ?? "bg-stone-100")}>{label}</span>;
 }
 
 function ReviewRow({ t, categories, onDone }: { t: Txn; categories: Cat[]; onDone: () => void }) {
@@ -119,14 +119,14 @@ function ReviewRow({ t, categories, onDone }: { t: Txn; categories: Cat[]; onDon
   async function reject() { setBusy(true); await fetch(`/api/transactions/${t.id}/reject`, { method: "POST" }); setBusy(false); onDone(); }
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3">
+    <div className="rounded-lg border border-stone-200 bg-white p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <span className="font-medium">{t.description}</span>
-          <span className="ml-2 text-xs text-slate-400">{t.txn_date} · {gbp(t.amount)} · {Math.round((t.confidence ?? 0) * 100)}% confidence</span>
+          <span className="ml-2 text-xs text-stone-400">{t.txn_date} · {gbp(t.amount)} · {Math.round((t.confidence ?? 0) * 100)}% confidence</span>
         </div>
         <div className="flex items-center gap-2">
-          <select value={code} onChange={(e) => setCode(e.target.value)} className="rounded-md border border-slate-300 px-2 py-1 text-sm">
+          <select value={code} onChange={(e) => setCode(e.target.value)} className="rounded-md border border-stone-300 px-2 py-1 text-sm">
             {opts.map((c) => <option key={c.code} value={c.code}>{c.label}</option>)}
           </select>
           <button onClick={confirm} disabled={busy} className="rounded-md bg-green-600 px-3 py-1 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50">Confirm</button>

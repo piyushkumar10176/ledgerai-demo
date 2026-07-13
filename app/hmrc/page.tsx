@@ -17,7 +17,7 @@ export default async function HmrcPage({
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
       <h1 className="text-2xl font-bold tracking-tight">HMRC sandbox integration</h1>
-      <p className="text-sm text-slate-500">Real HMRC Developer Sandbox — OAuth 2.0, fraud-prevention headers, live API calls.</p>
+      <p className="text-sm text-stone-500">Real HMRC Developer Sandbox — OAuth 2.0, fraud-prevention headers, live API calls.</p>
 
       {sp.connected && <Banner ok>Connected to HMRC — agent token stored.</Banner>}
       {sp.error && <Banner>Connect failed: {sp.error.replace(/_/g, " ")}. Check the Dev Hub setup below.</Banner>}
@@ -34,19 +34,19 @@ export default async function HmrcPage({
 
       <div className="mt-4 card p-5">
         <h2 className="font-semibold">Connect an agent (VAT/ITSA)</h2>
-        <p className="mt-1 text-sm text-slate-500">Starts the OAuth authorization-code flow against the sandbox.</p>
+        <p className="mt-1 text-sm text-stone-500">Starts the OAuth authorization-code flow against the sandbox.</p>
         <a href="/api/hmrc/connect?scope=read:vat+write:vat"
-          className="mt-3 inline-block rounded-md bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-indigo-700">
+          className="mt-3 inline-block rounded-md bg-brand-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-700">
           Connect to HMRC (sandbox)
         </a>
         {process.env.HMRC_TEST_USER_ID && (
-          <div className="mt-4 rounded-lg bg-slate-50 p-4 text-sm">
-            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Authorise with this sandbox test user</div>
-            <div className="mt-1 font-mono text-slate-700">
+          <div className="mt-4 rounded-lg bg-stone-50 p-4 text-sm">
+            <div className="text-xs font-semibold uppercase tracking-wide text-stone-500">Authorise with this sandbox test user</div>
+            <div className="mt-1 font-mono text-stone-700">
               User ID: {process.env.HMRC_TEST_USER_ID}<br />
               Password: {process.env.HMRC_TEST_USER_PASSWORD}
             </div>
-            <p className="mt-1 text-xs text-slate-400">Fay Ingham · VRN 466677396 · these are entered on HMRC&apos;s sandbox sign-in during Connect.</p>
+            <p className="mt-1 text-xs text-stone-400">Fay Ingham · VRN 466677396 · these are entered on HMRC&apos;s sandbox sign-in during Connect.</p>
           </div>
         )}
       </div>
@@ -67,8 +67,8 @@ export default async function HmrcPage({
 function StatusRow({ ok, label }: { ok: boolean; label: string }) {
   return (
     <li className="flex items-start gap-2">
-      <span className={ok ? "text-green-600" : "text-slate-300"}>{ok ? "✓" : "○"}</span>
-      <span className={ok ? "text-slate-800" : "text-slate-500"}>{label}</span>
+      <span className={ok ? "text-green-600" : "text-stone-300"}>{ok ? "✓" : "○"}</span>
+      <span className={ok ? "text-stone-800" : "text-stone-500"}>{label}</span>
     </li>
   );
 }

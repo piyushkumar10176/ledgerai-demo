@@ -26,14 +26,14 @@ export default async function PayrollPage({
       <div className="mt-6 card p-8 text-center">
         <div className="text-4xl">💷</div>
         <h2 className="mt-3 text-lg font-semibold">Payroll — integration, not built</h2>
-        <p className="mx-auto mt-2 max-w-lg text-sm text-slate-500">
+        <p className="mx-auto mt-2 max-w-lg text-sm text-stone-500">
           Per the product strategy, UK payroll (PAYE, National Insurance, auto-enrolment pension,
           student loan, RTI FPS/EPS, statutory pay) is a multi-year correctness grind with zero
           differentiation. LedgerAI <b>integrates / white-labels</b> an existing engine
           (e.g. BrightPay) rather than rebuilding it.
         </p>
-        <div className="mx-auto mt-4 max-w-lg rounded-lg bg-slate-50 p-4 text-left text-xs text-slate-600">
-          <div className="font-semibold text-slate-700">How UK payroll is calculated (per pay run):</div>
+        <div className="mx-auto mt-4 max-w-lg rounded-lg bg-stone-50 p-4 text-left text-xs text-stone-600">
+          <div className="font-semibold text-stone-700">How UK payroll is calculated (per pay run):</div>
           <ul className="mt-1 space-y-0.5">
             <li>• <b>Income Tax</b> — tax code (e.g. 1257L) → free pay; 20% to £37,700, 40% to £125,140, 45% above (cumulative).</li>
             <li>• <b>National Insurance</b> — employee 8% (£12,570–£50,270) then 2%; employer ~15% above £9,100.</li>

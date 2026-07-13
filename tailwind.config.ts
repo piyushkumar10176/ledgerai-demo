@@ -6,19 +6,24 @@ const config: Config = {
     extend: {
       fontFamily: {
         sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "var(--font-sans)", "system-ui", "sans-serif"],
       },
       colors: {
+        // Deep teal / pine — distinctive, not the usual indigo.
         brand: {
-          50: "#eef2ff", 100: "#e0e7ff", 200: "#c7d2fe", 300: "#a5b4fc",
-          400: "#818cf8", 500: "#6366f1", 600: "#4f46e5", 700: "#4338ca",
-          800: "#3730a3", 900: "#312e81", 950: "#1e1b4b",
+          50: "#effcf9", 100: "#d6f5ee", 200: "#aee9dd", 300: "#79d6c6",
+          400: "#45bcaa", 500: "#1fa08f", 600: "#0f766e", 700: "#0c5f59",
+          800: "#0d4c48", 900: "#0e3f3c", 950: "#042522",
         },
-        ink: { DEFAULT: "#0b1220", 900: "#0b1220", 800: "#111a2e", 700: "#1b2742", 600: "#26355a" },
+        // Warm near-black for the sidebar / ink.
+        ink: { DEFAULT: "#1a1714", 900: "#1a1714", 800: "#231e19", 700: "#2f2822", 600: "#40372f" },
+        // Warm ochre accent for highlights.
+        gold: { 100: "#faedd6", 400: "#e0a13a", 500: "#c9862a", 600: "#a86c1e" },
       },
-      borderRadius: { "2xl": "1rem", "3xl": "1.25rem" },
+      borderRadius: { "2xl": "1.1rem", "3xl": "1.5rem" },
       boxShadow: {
-        soft: "0 1px 2px rgba(16,24,40,.04), 0 10px 30px -14px rgba(16,24,40,.18)",
-        glow: "0 0 0 1px rgba(99,102,241,.15), 0 12px 40px -16px rgba(99,102,241,.35)",
+        soft: "0 1px 2px rgba(26,23,20,.04), 0 12px 28px -18px rgba(26,23,20,.20)",
+        lift: "0 2px 6px rgba(26,23,20,.05), 0 20px 44px -22px rgba(15,118,110,.28)",
       },
     },
   },

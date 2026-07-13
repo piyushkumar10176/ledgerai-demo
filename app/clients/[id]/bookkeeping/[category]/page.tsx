@@ -26,33 +26,33 @@ export default async function AccountLedgerPage({
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
-      <Link href={`/clients/${clientId}/bookkeeping`} className="text-sm text-slate-500 hover:text-slate-800">← Chart of accounts</Link>
+      <Link href={`/clients/${clientId}/bookkeeping`} className="text-sm text-stone-500 hover:text-stone-800">← Chart of accounts</Link>
       <div className="mt-2 flex items-end justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{label}</h1>
-          <p className="text-sm text-slate-500">{client.name} · account ledger</p>
+          <p className="text-sm text-stone-500">{client.name} · account ledger</p>
         </div>
         <div className="text-right">
-          <div className="text-xs uppercase text-slate-400">Balance</div>
+          <div className="text-xs uppercase text-stone-400">Balance</div>
           <div className="text-2xl font-bold tabular-nums">{formatGBP(total)}</div>
         </div>
       </div>
 
       <div className="mt-4 card overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+          <thead className="bg-stone-50 text-left text-xs uppercase tracking-wide text-stone-500">
             <tr><th className="px-4 py-2.5">Date</th><th className="px-4 py-2.5">Description</th><th className="px-4 py-2.5">Source</th><th className="px-4 py-2.5 text-right">Amount</th></tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-stone-100">
             {txns.map((t) => (
-              <tr key={t.id} className="hover:bg-slate-50">
-                <td className="px-4 py-2.5 text-slate-500">{t.txn_date}</td>
+              <tr key={t.id} className="hover:bg-stone-50">
+                <td className="px-4 py-2.5 text-stone-500">{t.txn_date}</td>
                 <td className="px-4 py-2.5">{t.description}</td>
-                <td className="px-4 py-2.5 text-slate-400">{t.business_name}</td>
+                <td className="px-4 py-2.5 text-stone-400">{t.business_name}</td>
                 <td className="px-4 py-2.5 text-right tabular-nums">{formatGBP(t.amount)}</td>
               </tr>
             ))}
-            {txns.length === 0 && <tr><td colSpan={4} className="px-4 py-6 text-center text-slate-400">No transactions.</td></tr>}
+            {txns.length === 0 && <tr><td colSpan={4} className="px-4 py-6 text-center text-stone-400">No transactions.</td></tr>}
           </tbody>
         </table>
       </div>

@@ -1,11 +1,16 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { Hanken_Grotesk, Bricolage_Grotesque } from "next/font/google";
 import "./globals.css";
 import AppShell from "@/components/AppShell";
 
-const sans = Plus_Jakarta_Sans({
+const body = Hanken_Grotesk({
   subsets: ["latin"],
   variable: "--font-sans",
+  display: "swap",
+});
+const display = Bricolage_Grotesque({
+  subsets: ["latin"],
+  variable: "--font-display",
   display: "swap",
 });
 
@@ -20,7 +25,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en-GB" className={sans.variable}>
+    <html lang="en-GB" className={`${body.variable} ${display.variable}`}>
       <body className="min-h-screen font-sans antialiased">
         <AppShell>{children}</AppShell>
       </body>

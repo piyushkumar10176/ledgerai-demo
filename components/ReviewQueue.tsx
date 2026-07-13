@@ -65,12 +65,12 @@ export default function ReviewQueue({
 
   return (
     <div>
-      <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm">
+      <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-stone-200 bg-white px-4 py-2.5 shadow-sm">
         <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={allSelected} onChange={toggleAll} className="h-4 w-4 rounded border-slate-300" />
+          <input type="checkbox" checked={allSelected} onChange={toggleAll} className="h-4 w-4 rounded border-stone-300" />
           Select all ({items.length})
         </label>
-        <span className="text-sm text-slate-400">{sel.size} selected</span>
+        <span className="text-sm text-stone-400">{sel.size} selected</span>
         <div className="ml-auto flex gap-2">
           <button onClick={() => bulk("confirm")} disabled={busy || sel.size === 0}
             className="rounded-md bg-green-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-40">
@@ -114,15 +114,15 @@ function Row({ it, checked, onToggle, categories, override, onOverride, onDone }
   }
 
   return (
-    <div className={"card p-4 " + (checked ? "ring-1 ring-indigo-300" : "")}>
+    <div className={"card p-4 " + (checked ? "ring-1 ring-brand-300" : "")}>
       <div className="flex flex-wrap items-center gap-3">
-        <input type="checkbox" checked={checked} onChange={onToggle} className="h-4 w-4 rounded border-slate-300" />
+        <input type="checkbox" checked={checked} onChange={onToggle} className="h-4 w-4 rounded border-stone-300" />
         <div className="min-w-0 flex-1">
           <div className="font-medium">{it.description}</div>
-          <div className="text-xs text-slate-400">{it.client_name} · {it.business_name} · {it.txn_date} · {gbp(it.amount)} ({it.direction})</div>
+          <div className="text-xs text-stone-400">{it.client_name} · {it.business_name} · {it.txn_date} · {gbp(it.amount)} ({it.direction})</div>
         </div>
         <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">{Math.round((it.confidence ?? 0) * 100)}%</span>
-        <select value={code} onChange={(e) => onOverride(e.target.value)} className="rounded-md border border-slate-300 px-2 py-1 text-sm">
+        <select value={code} onChange={(e) => onOverride(e.target.value)} className="rounded-md border border-stone-300 px-2 py-1 text-sm">
           {opts.map((c) => <option key={c.code} value={c.code}>{c.label}</option>)}
         </select>
         <button onClick={confirm} disabled={busy} className="rounded-md bg-green-600 px-3 py-1 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50">Confirm</button>
