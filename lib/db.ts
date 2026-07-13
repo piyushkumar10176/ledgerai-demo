@@ -128,6 +128,19 @@ CREATE TABLE IF NOT EXISTS client_services (
   PRIMARY KEY (client_id, service)
 );
 
+-- Practice-wide invoicing.
+CREATE TABLE IF NOT EXISTS invoices (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  firm_id INTEGER NOT NULL REFERENCES firms(id),
+  client_id INTEGER NOT NULL REFERENCES clients(id),
+  number TEXT NOT NULL,
+  amount INTEGER NOT NULL,            -- pennies
+  issued_date TEXT,
+  due_date TEXT,
+  status TEXT NOT NULL DEFAULT 'draft', -- draft | sent | paid | overdue
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 -- Stored HMRC OAuth tokens (per firm agent connection).
 CREATE TABLE IF NOT EXISTS hmrc_connections (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -1,4 +1,4 @@
-import { one, run } from "./db";
+import { one, many, run } from "./db";
 import { addTransaction } from "./transactions";
 import { submitQuarterlyUpdate } from "./quarterly-submit";
 import { setClientServices } from "./services";
@@ -154,5 +154,28 @@ export async function seedSampleData(firmId: number): Promise<void> {
 
     if (spec.submitQ1 && spec.txns.length > 0)
       await submitQuarterlyUpdate(firmId, clientId, sourceId, "2026Q1");
+  }
+
+  // Seed sample invoices once.
+  const invCount = await one<{ n: number }>(`SELECT COUNT(*) AS n FROM invoices WHERE firm_id = ?`, [firmId]);
+  if ((invCount?.n ?? 0) === 0) {
+    const cl = await many<{ id: number; name: string }>(`SELECT id, name FROM clients WHERE firm_id = ? ORDER BY id`, [firmId]);
+    const pick = (i: number) => cl[i % cl.length]?.id;
+    const INV: [string, number, number, string, string][] = [
+      ["INV-2048", 0, 640000, "in 12 days", "sent"],
+      ["INV-2047", 1, 215000, "Paid 8 Jul", "paid"],
+      ["INV-2044", 2, 380000, "in 4 days", "sent"],
+      ["INV-2041", 3, 420000, "21 days ago", "overdue"],
+      ["INV-2039", 0, 195000, "6 days ago", "overdue"],
+      ["INV-2038", 1, 560000, "Paid 2 Jul", "paid"],
+      ["INV-2051", 2, 98000, "Draft", "draft"],
+    ];
+    for (const [num, ci, amt, due, status] of INV) {
+      const clid = pick(ci);
+      if (clid) await run(
+        `INSERT INTO invoices (firm_id, client_id, number, amount, due_date, status) VALUES (?, ?, ?, ?, ?, ?)`,
+        [firmId, clid, num, amt, due, status],
+      );
+    }
   }
 }

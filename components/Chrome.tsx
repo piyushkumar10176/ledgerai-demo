@@ -13,21 +13,23 @@ function I({ d, s = 2, size = 19, color = "currentColor" }: { d: string; s?: num
 const ICONS = {
   dashboard: '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
   clients: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/>',
-  review: '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
-  mandation: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>',
-  hmrc: '<line x1="3" y1="22" x2="21" y2="22"/><line x1="6" y1="18" x2="6" y2="11"/><line x1="10" y1="18" x2="10" y2="11"/><line x1="14" y1="18" x2="14" y2="11"/><line x1="18" y1="18" x2="18" y2="11"/><path d="M12 2 2 8h20z"/>',
+  books: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+  invoices: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/>',
+  vat: '<line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/>',
+  sa: '<line x1="3" y1="22" x2="21" y2="22"/><line x1="6" y1="18" x2="6" y2="11"/><line x1="10" y1="18" x2="10" y2="11"/><line x1="14" y1="18" x2="14" y2="11"/><line x1="18" y1="18" x2="18" y2="11"/><path d="M12 2 2 8h20z"/>',
   spark: '<path d="M12 3l1.9 4.8L18.7 9l-4.8 1.9L12 15.7 10.1 10.9 5.3 9l4.8-1.2z"/>',
 };
 
 const NAV = [
-  { href: "/dashboard", label: "Dashboard", icon: ICONS.dashboard, match: (p: string) => p === "/dashboard" },
-  { href: "/clients", label: "Clients", icon: ICONS.clients, match: (p: string) => p.startsWith("/clients") },
-  { href: "/review", label: "Review queue", icon: ICONS.review, match: (p: string) => p.startsWith("/review") },
-  { href: "/mandation", label: "Mandation", icon: ICONS.mandation, match: (p: string) => p.startsWith("/mandation") },
-  { href: "/hmrc", label: "VAT & HMRC", icon: ICONS.hmrc, match: (p: string) => p.startsWith("/hmrc") },
+  { href: "/dashboard", label: "Dashboard", icon: ICONS.dashboard, badge: "", match: (p: string) => p === "/dashboard" },
+  { href: "/clients", label: "Clients", icon: ICONS.clients, badge: "clients", match: (p: string) => p.startsWith("/clients") },
+  { href: "/bookkeeping", label: "Bookkeeping", icon: ICONS.books, badge: "review", match: (p: string) => p.startsWith("/bookkeeping") },
+  { href: "/invoicing", label: "Invoicing", icon: ICONS.invoices, badge: "", match: (p: string) => p.startsWith("/invoicing") },
+  { href: "/vat-mtd", label: "VAT & MTD", icon: ICONS.vat, badge: "vat", match: (p: string) => p.startsWith("/vat-mtd") || p.startsWith("/hmrc") },
+  { href: "/self-assessment", label: "Self Assessment", icon: ICONS.sa, badge: "", match: (p: string) => p.startsWith("/self-assessment") },
 ];
 
-export default function Chrome({ name, children }: { name: string; children: React.ReactNode }) {
+export default function Chrome({ name, badges = {}, children }: { name: string; badges?: Record<string, number>; children: React.ReactNode }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -67,6 +69,9 @@ export default function Chrome({ name, children }: { name: string; children: Rea
                 : { color: "#a5a1c8" }}>
               <span className="flex flex-none"><I d={n.icon} size={19} color={active ? "#fff" : "#8a86b8"} /></span>
               {!collapsed && <span className="flex-1">{n.label}</span>}
+              {!collapsed && n.badge && (badges[n.badge] ?? 0) > 0 && (
+                <span className="flex-none rounded-full px-1.5 py-px text-[10px] font-extrabold" style={active ? { background: "rgba(255,255,255,.25)", color: "#fff" } : { background: "#f04438", color: "#fff" }}>{badges[n.badge]}</span>
+              )}
             </Link>
           );
         })}

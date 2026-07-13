@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { getClient } from "@/lib/data";
 import { getClientServices, SERVICES } from "@/lib/services";
 import { MagicLinkButton } from "@/components/ClientActions";
+import ClientEditForm from "@/components/ClientEditForm";
 import ServiceTabs from "@/components/ServiceTabs";
 
 export default async function ClientOverview({
@@ -57,20 +58,15 @@ export default async function ClientOverview({
       <ServiceTabs clientId={clientId} active="overview" services={services} />
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        <ClientEditForm
+          clientId={clientId}
+          initial={{ name: client.name, nino: client.nino ?? "", utr: client.utr ?? "", phone: client.phone ?? "", vrn: client.vrn ?? "" }}
+        />
         <div className="card p-5">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-stone-500">Taxpayer</h2>
-          <dl className="mt-2 space-y-1.5 text-sm">
-            <Row k="NINO" v={client.nino ?? "—"} />
-            <Row k="UTR" v={client.utr ?? "—"} />
-            <Row k="Mandation" v={mandation} />
-            <Row k="Agent authorisation" v={client.agent_auth_status} />
-            <Row k="Mobile" v={client.phone ?? "—"} />
-          </dl>
-        </div>
-        <div className="card p-5">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-stone-500">Collect data · zero client login</h2>
-          <p className="mt-1 text-xs text-stone-500">Generate a magic link the client taps to upload a bank CSV or receipt — no app, no password.</p>
+          <h2 className="text-xs font-bold uppercase tracking-wide text-[#8a879a]">Collect data · zero client login</h2>
+          <p className="mt-1 text-xs text-[#8a879a]">Generate a magic link the client taps to upload a bank CSV or receipt — no app, no password.</p>
           <div className="mt-3"><MagicLinkButton clientId={clientId} /></div>
+          <div className="mt-3 border-t border-[#f4f4f9] pt-3 text-xs text-[#8a879a]">Mandation: <b className="text-[#16151c]">{mandation}</b> · Agent auth: <b className="text-[#16151c]">{client.agent_auth_status}</b></div>
         </div>
       </div>
 

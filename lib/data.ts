@@ -54,6 +54,23 @@ export async function createClient(
   return r.lastId;
 }
 
+// Edit a client's details (name, NINO, UTR, phone, VRN).
+export async function updateClientInfo(
+  firmId: number,
+  id: number,
+  f: Partial<{ name: string; nino: string; utr: string; phone: string; vrn: string }>,
+): Promise<void> {
+  const cols: [keyof typeof f, string][] = [["name", "name"], ["nino", "nino"], ["utr", "utr"], ["phone", "phone"], ["vrn", "vrn"]];
+  const sets: string[] = [];
+  const args: (string | number)[] = [];
+  for (const [k, col] of cols) {
+    if (f[k] !== undefined) { sets.push(`${col} = ?`); args.push(String(f[k]).trim()); }
+  }
+  if (sets.length === 0) return;
+  args.push(id, firmId);
+  await run(`UPDATE clients SET ${sets.join(", ")} WHERE id = ? AND firm_id = ?`, args);
+}
+
 export interface IncomeSource {
   id: number;
   client_id: number;

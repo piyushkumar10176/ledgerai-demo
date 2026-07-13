@@ -49,6 +49,36 @@ export async function chartOfAccounts(clientId: number): Promise<{
   return { income, expenses, incomeTotal, expenseTotal, netProfit: incomeTotal - expenseTotal };
 }
 
+export interface FeedTxn {
+  id: number;
+  client_id: number;
+  client_name: string;
+  business_name: string;
+  txn_date: string;
+  description: string;
+  direction: string;
+  category: string | null;
+  source_type: string;
+  amount: number;
+  status: string;
+  confidence: number | null;
+}
+
+// Practice-wide recent transactions across every client (the Bookkeeping feed).
+export function practiceFeed(firmId: number, limit = 60): Promise<FeedTxn[]> {
+  return many<FeedTxn>(
+    `SELECT t.id, t.client_id, c.name AS client_name, s.business_name, s.type AS source_type,
+            t.txn_date, t.description, t.direction, t.category, t.amount, t.status, t.confidence
+       FROM transactions t
+       JOIN clients c ON c.id = t.client_id
+       JOIN income_sources s ON s.id = t.income_source_id
+      WHERE t.firm_id = ?
+      ORDER BY t.txn_date DESC, t.id DESC
+      LIMIT ?`,
+    [firmId, limit],
+  );
+}
+
 export interface LedgerTxn {
   id: number;
   txn_date: string;
