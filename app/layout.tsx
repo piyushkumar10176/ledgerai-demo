@@ -1,21 +1,13 @@
 import type { Metadata } from "next";
-import { Hanken_Grotesk, Bricolage_Grotesque } from "next/font/google";
+import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import AppShell from "@/components/AppShell";
 
-const body = Hanken_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-sans",
-  display: "swap",
-});
-const display = Bricolage_Grotesque({
-  subsets: ["latin"],
-  variable: "--font-display",
-  display: "swap",
-});
+const sans = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
+const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "LedgerAI UK — MTD demo",
+  title: "LedgerAI UK — Practice",
   description: "AI-assisted MTD filing for UK accounting practices.",
 };
 
@@ -25,7 +17,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en-GB" className={`${body.variable} ${display.variable}`}>
+    <html lang="en-GB" className={`${sans.variable} ${mono.variable}`}>
       <body className="min-h-screen font-sans antialiased">
         <AppShell>{children}</AppShell>
       </body>
