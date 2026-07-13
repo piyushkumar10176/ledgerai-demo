@@ -38,6 +38,20 @@ export default async function ClientOverview({
             })}
           </div>
         </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {client.vrn && (
+            <a
+              href={`https://test-www.tax.service.gov.uk`}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-ghost"
+              title="Open HMRC online services (sandbox)"
+            >
+              ↗ HMRC online
+            </a>
+          )}
+          <Link href="/hmrc" className="btn-primary">🏛️ HMRC</Link>
+        </div>
       </div>
 
       <ServiceTabs clientId={clientId} active="overview" services={services} />

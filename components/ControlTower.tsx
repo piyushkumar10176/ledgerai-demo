@@ -108,7 +108,8 @@ export default function ControlTower({
       </div>
 
       <div className="mt-3 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
-        <table className="w-full text-sm">
+        <div className="scroll-x">
+        <table className="w-full min-w-[720px] text-sm">
           <thead className="bg-stone-50 text-left text-xs uppercase tracking-wide text-stone-500">
             <tr>
               <th className="px-4 py-3">Client · business</th>
@@ -176,6 +177,7 @@ export default function ControlTower({
             )}
           </tbody>
         </table>
+        </div>
       </div>
       <p className="mt-2 text-xs text-stone-400">
         "Chase" and "Bulk-file" are mocked (no SMS/email or real HMRC submission). Net profit is

@@ -154,6 +154,47 @@ export async function confirmTransaction(
   ]);
 }
 
+// Manually add an entry (accountant-entered, auto-confirmed).
+export async function createManualTransaction(
+  firmId: number,
+  clientId: number,
+  sourceId: number,
+  t: { date: string; description: string; amount: number; direction: string; category: string },
+): Promise<number> {
+  const r = await run(
+    `INSERT INTO transactions
+       (firm_id, client_id, income_source_id, txn_date, description, direction, category, amount, source, confidence, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'manual', 1.0, 'confirmed')`,
+    [firmId, clientId, sourceId, t.date, t.description.trim(), t.direction, t.category, Math.abs(Math.round(t.amount))],
+  );
+  return r.lastId;
+}
+
+// Edit an existing entry (any subset of fields).
+export async function updateTransaction(
+  firmId: number,
+  id: number,
+  f: Partial<{ date: string; description: string; amount: number; direction: string; category: string; status: string }>,
+): Promise<void> {
+  const sets: string[] = [];
+  const args: (string | number)[] = [];
+  if (f.date !== undefined) { sets.push("txn_date = ?"); args.push(f.date); }
+  if (f.description !== undefined) { sets.push("description = ?"); args.push(f.description.trim()); }
+  if (f.amount !== undefined) { sets.push("amount = ?"); args.push(Math.abs(Math.round(f.amount))); }
+  if (f.direction !== undefined) { sets.push("direction = ?"); args.push(f.direction); }
+  if (f.category !== undefined) { sets.push("category = ?"); args.push(f.category); }
+  if (f.status !== undefined) { sets.push("status = ?"); args.push(f.status); }
+  if (sets.length === 0) return;
+  args.push(id, firmId);
+  await run(`UPDATE transactions SET ${sets.join(", ")} WHERE id = ? AND firm_id = ?`, args);
+}
+
+// Remove an entry (and its AI-decision audit rows).
+export async function deleteTransaction(firmId: number, id: number): Promise<void> {
+  await run(`DELETE FROM ai_decisions WHERE transaction_id = ? AND firm_id = ?`, [id, firmId]);
+  await run(`DELETE FROM transactions WHERE id = ? AND firm_id = ?`, [id, firmId]);
+}
+
 export async function rejectTransaction(
   firmId: number,
   txnId: number,
