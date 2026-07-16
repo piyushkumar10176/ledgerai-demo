@@ -14,6 +14,15 @@ export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get("code");
   if (!code) return NextResponse.redirect(new URL("/hmrc?error=no_code", req.url));
 
+  // Validate the state we set on /connect (security audit fix — login CSRF).
+  const returnedState = req.nextUrl.searchParams.get("state");
+  const expectedState = req.cookies.get("hmrc_oauth_state")?.value;
+  if (!returnedState || !expectedState || returnedState !== expectedState)
+    return NextResponse.redirect(new URL("/hmrc?error=bad_state", req.url));
+
   const ok = await exchangeCodeForToken(session.firmId, code);
-  return NextResponse.redirect(new URL(`/hmrc?${ok ? "connected=1" : "error=exchange_failed"}`, req.url));
+  const res = NextResponse.redirect(
+    new URL(`/hmrc?${ok ? "connected=1" : "error=exchange_failed"}`, req.url));
+  res.cookies.delete("hmrc_oauth_state");
+  return res;
 }

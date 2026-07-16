@@ -4,9 +4,18 @@ import { one } from "./db";
 
 // DEMO auth: hashed passwords (scrypt) + a signed session cookie (HMAC).
 // Simple by design — the FRD's real target is Keycloak. See NOTES.md.
-const SECRET =
-  process.env.SESSION_SECRET || "ledgerai-demo-dev-secret-change-me";
+// Audit fix: in production the signing secret MUST come from the environment —
+// a committed fallback makes every session forgeable. Lazy (checked at first
+// use, not import) so `next build`'s page-data collection doesn't trip it.
+function getSecret(): string {
+  const s = process.env.SESSION_SECRET;
+  if (s) return s;
+  if (process.env.NODE_ENV === "production")
+    throw new Error("SESSION_SECRET must be set in production — refusing to run with the dev fallback.");
+  return "ledgerai-demo-dev-secret-change-me";
+}
 const COOKIE = "ledgerai_session";
+const SESSION_TTL_MS = 8 * 3600 * 1000;
 
 export function hashPassword(pw: string): string {
   const salt = crypto.randomBytes(16).toString("hex");
@@ -31,11 +40,15 @@ export interface Session {
 }
 
 function sign(payload: string): string {
-  return crypto.createHmac("sha256", SECRET).update(payload).digest("base64url");
+  return crypto.createHmac("sha256", getSecret()).update(payload).digest("base64url");
 }
 
 function serialize(s: Session): string {
-  const body = Buffer.from(JSON.stringify(s)).toString("base64url");
+  // exp inside the signed payload (audit fix): a stolen token dies with the
+  // session instead of living as long as the signing key.
+  const body = Buffer.from(
+    JSON.stringify({ ...s, exp: Date.now() + SESSION_TTL_MS }),
+  ).toString("base64url");
   return `${body}.${sign(body)}`;
 }
 
@@ -44,7 +57,10 @@ function deserialize(token: string): Session | null {
   if (!body || !sig) return null;
   if (sign(body) !== sig) return null; // tamper check
   try {
-    return JSON.parse(Buffer.from(body, "base64url").toString());
+    const parsed = JSON.parse(Buffer.from(body, "base64url").toString()) as
+      Session & { exp?: number };
+    if (!parsed.exp || parsed.exp < Date.now()) return null; // expired
+    return parsed;
   } catch {
     return null;
   }

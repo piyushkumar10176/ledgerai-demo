@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { getClient } from "@/lib/data";
+import { statusLabel } from "@/lib/engine/mandation-engine";
 import { getClientServices, SERVICES } from "@/lib/services";
 import { MagicLinkButton } from "@/components/ClientActions";
 import ClientEditForm from "@/components/ClientEditForm";
@@ -23,7 +24,7 @@ export default async function ClientOverview({
   const mandation =
     client.mandation_status === "mandated"
       ? `Mandated${client.mandation_wave ? ` · wave ${client.mandation_wave}` : ""}`
-      : client.mandation_status;
+      : statusLabel(client.mandation_status);
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">

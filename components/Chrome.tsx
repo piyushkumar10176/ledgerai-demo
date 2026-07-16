@@ -23,7 +23,9 @@ const ICONS = {
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: ICONS.dashboard, badge: "", match: (p: string) => p === "/dashboard" },
   { href: "/clients", label: "Clients", icon: ICONS.clients, badge: "clients", match: (p: string) => p.startsWith("/clients") },
-  { href: "/bookkeeping", label: "Bookkeeping", icon: ICONS.books, badge: "review", match: (p: string) => p.startsWith("/bookkeeping") },
+  { href: "/mandation", label: "Mandation", icon: ICONS.spark, badge: "", match: (p: string) => p.startsWith("/mandation") },
+  { href: "/review", label: "Review queue", icon: ICONS.books, badge: "review", match: (p: string) => p.startsWith("/review") },
+  { href: "/bookkeeping", label: "Bookkeeping", icon: ICONS.books, badge: "", match: (p: string) => p.startsWith("/bookkeeping") },
   { href: "/invoicing", label: "Invoicing", icon: ICONS.invoices, badge: "", match: (p: string) => p.startsWith("/invoicing") },
   { href: "/vat-mtd", label: "VAT & MTD", icon: ICONS.vat, badge: "vat", match: (p: string) => p.startsWith("/vat-mtd") || p.startsWith("/hmrc") },
   { href: "/self-assessment", label: "Self Assessment", icon: ICONS.sa, badge: "", match: (p: string) => p.startsWith("/self-assessment") },
@@ -171,8 +173,10 @@ function Copilot({ onClose }: { onClose: () => void }) {
         <div className="flex items-center gap-3 px-5 py-4 text-white" style={{ background: "linear-gradient(120deg,#1c1938,#2a2350)" }}>
           <div className="flex h-9 w-9 flex-none items-center justify-center rounded-[11px]" style={{ background: "linear-gradient(135deg,#7c6cf5,#a78bfa)" }}><I d={ICONS.spark} size={18} color="#fff" /></div>
           <div className="flex-1">
-            <div className="text-[15px] font-extrabold">LedgerAI Copilot</div>
-            <div className="flex items-center gap-1.5 text-[11px]" style={{ color: "#b9b4d8" }}><span className="h-1.5 w-1.5 rounded-full bg-[#6ee7b7]" style={{ animation: "pulseDot 2s infinite" }} />Connected to the practice ledger</div>
+            <div className="flex items-center gap-2 text-[15px] font-extrabold">LedgerAI Copilot
+              <span className="rounded bg-amber-400/20 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">MOCK</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-[11px]" style={{ color: "#b9b4d8" }}>Scripted demo replies — not connected to a model or the ledger yet</div>
           </div>
           <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-white/10 text-white">✕</button>
         </div>

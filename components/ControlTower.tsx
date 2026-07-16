@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { statusLabel } from "@/lib/engine/mandation-engine";
 
 type Status = "filed" | "ready" | "missing";
 interface Obligation {
@@ -133,7 +134,7 @@ export default function ControlTower({
                   </td>
                   <td className="px-4 py-3">
                     <span className={"rounded-full px-2 py-0.5 text-xs " + (o.mandationStatus === "mandated" ? "bg-stone-100 text-stone-700" : "bg-stone-50 text-stone-400")}>
-                      {o.mandationStatus === "mandated" ? "Mandated" : o.mandationStatus === "voluntary" ? "Voluntary" : o.mandationStatus === "not_mandated" ? "Not mandated" : "Unknown"}
+                      {statusLabel(o.mandationStatus)}
                     </span>
                     {o.agentAuth !== "linked" && (
                       <div className="mt-1 text-[10px] text-amber-600">agent auth: {o.agentAuth}</div>

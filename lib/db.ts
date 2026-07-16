@@ -110,6 +110,25 @@ CREATE TABLE IF NOT EXISTS quarterly_updates (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Look-back-year gross income per client (TRI-02..05): the inputs to the REAL
+-- mandation engine (lib/engine). One row per client + tax year + source.
+-- Distinct from income_sources (live businesses with transactions): these are
+-- the historic return figures the legal test runs on. Pennies.
+CREATE TABLE IF NOT EXISTS source_year_income (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  firm_id INTEGER NOT NULL REFERENCES firms(id),
+  client_id INTEGER NOT NULL REFERENCES clients(id),
+  tax_year_start INTEGER NOT NULL,                 -- 2024 = 2024-25
+  type TEXT NOT NULL,                              -- engine QiSourceType
+  description TEXT,
+  gross_income INTEGER NOT NULL,                   -- pennies, GROSS (never profit)
+  share_percent REAL NOT NULL DEFAULT 100,
+  months_active INTEGER NOT NULL DEFAULT 12,
+  alt_annualisation INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_syi_client ON source_year_income(client_id, tax_year_start);
+
 -- Magic links for zero-login client data collection.
 CREATE TABLE IF NOT EXISTS magic_links (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -168,6 +187,25 @@ async function build(): Promise<Client> {
   const MIGRATIONS = [
     "ALTER TABLE clients ADD COLUMN vrn TEXT",
     "ALTER TABLE clients ADD COLUMN mtd_it_id TEXT",
+    // Real mandation engine inputs (SI 2026/336 exemption/deferral markers)
+    "ALTER TABLE clients ADD COLUMN is_uk_resident INTEGER NOT NULL DEFAULT 1",
+    "ALTER TABLE clients ADD COLUMN files_sa900 INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE clients ADD COLUMN files_sa700 INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE clients ADD COLUMN lloyds_underwriter INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE clients ADD COLUMN minister_of_religion INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE clients ADD COLUMN power_of_attorney INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE clients ADD COLUMN mca_bpa INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE clients ADD COLUMN files_sa109 INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE clients ADD COLUMN files_sa107 INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE clients ADD COLUMN claims_averaging INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE clients ADD COLUMN qualifying_care INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE clients ADD COLUMN nonres_entertainer INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE clients ADD COLUMN voluntary_signup INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE clients ADD COLUMN digital_exclusion TEXT NOT NULL DEFAULT 'not-applied'",
+    "ALTER TABLE clients ADD COLUMN ceased_on TEXT",
+    // Real mandation engine outputs
+    "ALTER TABLE clients ADD COLUMN mandation_from TEXT",
+    "ALTER TABLE clients ADD COLUMN mandation_reasons TEXT",
   ];
   for (const sql of MIGRATIONS) {
     try {
