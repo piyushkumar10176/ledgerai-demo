@@ -17,10 +17,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "clients.csv is too large (2 MB max)." }, { status: 400 });
 
   const incomeFile = form.get("income");
-  const incomeCsv =
-    incomeFile instanceof File && incomeFile.size <= 2_000_000
-      ? await incomeFile.text()
-      : null;
+  if (incomeFile instanceof File && incomeFile.size > 2_000_000)
+    // Error loudly (audit fix): silently dropping the income file would produce
+    // a plausible-looking but wrong mandation report.
+    return NextResponse.json({ error: "income.csv is too large (2 MB max)." }, { status: 400 });
+  const incomeCsv = incomeFile instanceof File ? await incomeFile.text() : null;
 
   const result = await importClientBook(session.firmId, await clientsFile.text(), incomeCsv);
   await runMandationCheck(session.firmId);

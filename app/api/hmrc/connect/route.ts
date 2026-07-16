@@ -19,6 +19,7 @@ export async function GET(req: NextRequest) {
   res.cookies.set("hmrc_oauth_state", state, {
     httpOnly: true,
     sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
     path: "/api/hmrc",
     maxAge: 600,
   });

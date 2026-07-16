@@ -1,4 +1,4 @@
-import { many, run } from "./db";
+import { db, many, run } from "./db";
 import type { QiSourceType } from "./engine/qualifying-income";
 import { parseTaxYear } from "./engine/tax-year";
 
@@ -106,11 +106,13 @@ const flag = (row: Record<string, string>, key: string, dflt = false): boolean =
   return ["y", "yes", "true", "1"].includes(v.toLowerCase());
 };
 
-/** '£51,000' / '51 000.50' → pennies; null if unparseable. */
+/** '£51,000' / '51 000.50' / '.50' / '1234.567' → pennies; null if unparseable.
+ *  (Audit fix: the canonical .NET importer accepts bare-leading-decimal and
+ *  >2dp amounts — parity restored, rounding to the penny.) */
 export function parseMoneyPennies(text: string | null): number | null {
   if (text === null) return null;
   const cleaned = text.replace(/£|\s|,/g, "");
-  if (!/^-?\d+(\.\d{1,2})?$/.test(cleaned)) return null;
+  if (!/^-?(\d+(\.\d+)?|\.\d+)$/.test(cleaned)) return null;
   return Math.round(Number(cleaned) * 100);
 }
 
@@ -357,25 +359,37 @@ export async function importClientBook(
     }
 
     // Apply: each client+year in the VALID staged set replaces that year's rows —
-    // a year is never wiped for rows that failed validation.
+    // a year is never wiped for rows that failed validation, and the whole
+    // destructive phase runs as ONE batch (audit fix: a mid-apply DB failure
+    // must not leave a year deleted with no replacement — all-or-nothing, like
+    // the canonical .NET importer's single SaveChanges).
+    const stmts: { sql: string; args: (string | number | null)[] }[] = [];
     const wiped = new Set<string>();
     for (const s of staged) {
       const key = `${s.clientId}:${s.taxYearStart}`;
       if (!wiped.has(key)) {
-        await run(
-          `DELETE FROM source_year_income WHERE firm_id = ? AND client_id = ? AND tax_year_start = ?`,
-          [firmId, s.clientId, s.taxYearStart],
-        );
+        stmts.push({
+          sql: `DELETE FROM source_year_income WHERE firm_id = ? AND client_id = ? AND tax_year_start = ?`,
+          args: [firmId, s.clientId, s.taxYearStart],
+        });
         wiped.add(key);
       }
-      await run(
-        `INSERT INTO source_year_income
-           (firm_id, client_id, tax_year_start, type, description, gross_income,
-            share_percent, months_active, alt_annualisation)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [firmId, s.clientId, s.taxYearStart, s.type, s.description, s.gross,
-         s.share, s.months, s.alt ? 1 : 0],
-      );
+      stmts.push({
+        sql: `INSERT INTO source_year_income
+                (firm_id, client_id, tax_year_start, type, description, gross_income,
+                 share_percent, months_active, alt_annualisation)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [firmId, s.clientId, s.taxYearStart, s.type, s.description, s.gross,
+               s.share, s.months, s.alt ? 1 : 0],
+      });
+    }
+    if (stmts.length > 0) {
+      try {
+        await (await db()).batch(stmts, "write");
+      } catch (e) {
+        errors.push(`income.csv: saving failed — no income changes were stored (${(e as Error).message}).`);
+        incomeRows = 0;
+      }
     }
   }
 

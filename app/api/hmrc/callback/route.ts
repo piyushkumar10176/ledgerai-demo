@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
   const ok = await exchangeCodeForToken(session.firmId, code);
   const res = NextResponse.redirect(
     new URL(`/hmrc?${ok ? "connected=1" : "error=exchange_failed"}`, req.url));
-  res.cookies.delete("hmrc_oauth_state");
+  // Path must match the set-cookie path or the delete is a no-op.
+  res.cookies.set("hmrc_oauth_state", "", { path: "/api/hmrc", maxAge: 0 });
   return res;
 }

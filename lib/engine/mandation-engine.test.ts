@@ -242,6 +242,19 @@ describe("exit rule (three consecutive years IN MTD; audit-corrected)", () => {
   });
 });
 
+describe("rounding parity with the .NET engine (banker's rounding)", () => {
+  it("half-penny midpoints round to even — £100,000.01 at 50% share is NOT mandated", () => {
+    // 10,000,001p × 50% = 5,000,000.5p → ToEven → 5,000,000 = exactly £50,000,
+    // which is NOT over the threshold (strict greater-than). The .NET engine
+    // agrees; naive Math.round would flip this verdict.
+    const a = assessMandation(withYears(client(), {
+      2024: [{ type: "uk-property", grossIncome: 10_000_001, sharePercent: 50, monthsActive: 12 }],
+    }), TODAY);
+    expect(a.status).toBe("not-mandated");
+    expect(a.yearlyIncome[0].total).toBe(5_000_000);
+  });
+});
+
 describe("voluntary and unassessed", () => {
   it("below threshold + voluntary sign-up is voluntary", () => {
     const a = assessMandation(

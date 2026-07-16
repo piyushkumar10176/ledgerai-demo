@@ -177,7 +177,10 @@ async function build(): Promise<Client> {
   const url =
     process.env.TURSO_DATABASE_URL ||
     process.env.LIBSQL_URL ||
-    "file:./data/ledgerai.db";
+    // On Vercel the bundle filesystem is read-only; /tmp works per warm
+    // instance and ensureDemoData re-seeds on cold start. Fine for the demo —
+    // set TURSO_DATABASE_URL for durable data.
+    (process.env.VERCEL ? "file:/tmp/ledgerai.db" : "file:./data/ledgerai.db");
   const authToken =
     process.env.TURSO_AUTH_TOKEN || process.env.LIBSQL_AUTH_TOKEN;
   const client = createClient({ url, authToken, intMode: "number" });

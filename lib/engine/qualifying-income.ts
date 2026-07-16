@@ -53,6 +53,17 @@ export interface YearQualifyingIncome {
 
 const PROPERTY_TYPES: QiSourceType[] = ["uk-property", "foreign-property"];
 
+/** Round half-to-even at the penny — replicating C# decimal Math.Round's
+ * banker's rounding so the TS and .NET engines can never disagree at
+ * half-penny midpoints (a verified verdict-flip otherwise: £100,000.01 at a
+ * 50% share sits exactly on the £50,000 threshold boundary). */
+export function roundHalfToEven(x: number): number {
+  const floor = Math.floor(x);
+  const diff = x - floor;
+  if (Math.abs(diff - 0.5) < 1e-7) return floor % 2 === 0 ? floor : floor + 1;
+  return Math.round(x);
+}
+
 function isCounted(
   type: QiSourceType,
   isUkResident: boolean,
@@ -127,7 +138,7 @@ export function computeQualifyingIncome(
       grossIncome: s.grossIncome,
       sharePercent: s.sharePercent,
       monthsActive: s.monthsActive,
-      countedAmount: Math.round(amount),
+      countedAmount: roundHalfToEven(amount),
       counted,
       note: note.trim(),
     });
@@ -137,5 +148,5 @@ export function computeQualifyingIncome(
     .filter((c) => c.counted)
     .reduce((sum, c) => sum + c.countedAmount, 0);
 
-  return { year, total: Math.round(total), sources: contributions, requiresManualReview: manualReview };
+  return { year, total, sources: contributions, requiresManualReview: manualReview };
 }

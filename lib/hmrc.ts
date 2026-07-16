@@ -24,12 +24,10 @@ export function hmrcConfig() {
 // STABLE per deployment — a fresh uuid per request defeats its purpose — and
 // the set now covers the user/timezone/screen headers HMRC validates).
 // Production must still verify via HMRC's Test Fraud Prevention Headers API.
-const DEVICE_ID = crypto
-  .createHash("sha256")
-  .update(process.env.SESSION_SECRET ?? "ledgerai-demo-device")
-  .digest("hex")
-  .slice(0, 32)
-  .replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, "$1-$2-$3-$4-$5");
+// Audit fix: NEVER derive the device id from the session-signing secret (that
+// ships a hash of the secret to a third party). Dedicated env var, else a
+// random id stable for the process lifetime.
+const DEVICE_ID = process.env.HMRC_DEVICE_ID || crypto.randomUUID();
 
 export function fraudHeaders(userId?: string | number): Record<string, string> {
   const now = new Date().toISOString();

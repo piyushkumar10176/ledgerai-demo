@@ -56,17 +56,20 @@ export async function resolveMagicLink(
   };
 }
 
-/** Revoke every live link for a client (e.g. sent to the wrong number). */
+/** Revoke every live link for a client (e.g. sent to the wrong number).
+ *  Wired to POST /api/clients/[id]/revoke-links. */
 export async function revokeMagicLinks(firmId: number, clientId: number): Promise<void> {
   await run(
-    `UPDATE magic_links SET expires_at = datetime('now')
-      WHERE firm_id = ? AND client_id = ?`,
-    [firmId, clientId],
+    `UPDATE magic_links SET expires_at = ? WHERE firm_id = ? AND client_id = ?`,
+    [new Date().toISOString(), firmId, clientId],
   );
 }
 
 export async function markMagicLinkUsed(token: string): Promise<void> {
-  await run(`UPDATE magic_links SET used_at = datetime('now') WHERE token = ?`, [
+  // ISO-with-Z (audit fix): datetime('now') has no timezone marker and parses
+  // as LOCAL time in JS — hours of drift on servers west of UTC.
+  await run(`UPDATE magic_links SET used_at = ? WHERE token = ?`, [
+    new Date().toISOString(),
     token,
   ]);
 }
