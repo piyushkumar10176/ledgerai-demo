@@ -71,7 +71,7 @@ export default async function MandationPage({
       )}
 
       {/* TRI-01: the book import — upload the firm's client list, get the report */}
-      <div className="mt-6 rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
+      <div data-tour="book-import" className="mt-6 rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
         <h2 className="text-sm font-semibold text-stone-700">Import client book (CSV)</h2>
         <p className="mt-1 text-xs text-stone-500">
           <code>clients.csv</code> (Name, NINO, UTR + exemption/deferral flags) and optionally{" "}
@@ -93,7 +93,7 @@ export default async function MandationPage({
         </form>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
+      <div data-tour="mandation-table" className="mt-4 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
         <table className="w-full text-sm">
           <thead className="bg-stone-50 text-left text-xs uppercase tracking-wide text-stone-500">
             <tr>
