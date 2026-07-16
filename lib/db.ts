@@ -222,7 +222,18 @@ async function build(): Promise<Client> {
 
 export async function db(): Promise<Client> {
   if (_client) return _client;
-  if (!_init) _init = build().then((c) => (_client = c));
+  if (!_init)
+    _init = build().then(async (c) => {
+      _client = c;
+      // Ephemeral-DB mode (Vercel /tmp, no Turso): every serverless instance
+      // self-seeds on first touch so any route lands on a populated demo —
+      // otherwise only the login instance would have data.
+      if (process.env.VERCEL && !process.env.TURSO_DATABASE_URL) {
+        const { ensureDemoData } = await import("./seed");
+        await ensureDemoData().catch(() => {});
+      }
+      return c;
+    });
   return _init;
 }
 
