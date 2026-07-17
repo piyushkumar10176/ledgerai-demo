@@ -41,12 +41,14 @@ export default async function HmrcPage({
         </a>
         {process.env.HMRC_TEST_USER_ID && (
           <div className="mt-4 rounded-lg bg-stone-50 p-4 text-sm">
-            <div className="text-xs font-semibold uppercase tracking-wide text-stone-500">Authorise with this sandbox test user</div>
-            <div className="mt-1 font-mono text-stone-700">
-              User ID: {process.env.HMRC_TEST_USER_ID}<br />
-              Password: {process.env.HMRC_TEST_USER_PASSWORD}
-            </div>
-            <p className="mt-1 text-xs text-stone-400">Fay Ingham · VRN 466677396 · these are entered on HMRC&apos;s sandbox sign-in during Connect.</p>
+            <div className="text-xs font-semibold uppercase tracking-wide text-stone-500">Sandbox test user</div>
+            {/* Audit fix: credentials are never rendered to the page — even
+                sandbox ones, on a public demo. Get them from the env/team vault. */}
+            <p className="mt-1 text-xs text-stone-500">
+              A sandbox test user is configured (see <code>HMRC_TEST_USER_ID</code> in the
+              deployment env). Enter its credentials on HMRC&apos;s sandbox sign-in page
+              during Connect — they are not displayed here.
+            </p>
           </div>
         )}
       </div>

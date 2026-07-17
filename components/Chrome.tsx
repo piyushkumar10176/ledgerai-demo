@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import AppTour from "@/components/AppTour";
 
 // Icons (stroke) matching the design handoff.
 function I({ d, s = 2, size = 19, color = "currentColor" }: { d: string; s?: number; size?: number; color?: string }) {
@@ -23,7 +24,9 @@ const ICONS = {
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: ICONS.dashboard, badge: "", match: (p: string) => p === "/dashboard" },
   { href: "/clients", label: "Clients", icon: ICONS.clients, badge: "clients", match: (p: string) => p.startsWith("/clients") },
-  { href: "/bookkeeping", label: "Bookkeeping", icon: ICONS.books, badge: "review", match: (p: string) => p.startsWith("/bookkeeping") },
+  { href: "/mandation", label: "Mandation", icon: ICONS.spark, badge: "", match: (p: string) => p.startsWith("/mandation") },
+  { href: "/review", label: "Review queue", icon: ICONS.books, badge: "review", match: (p: string) => p.startsWith("/review") },
+  { href: "/bookkeeping", label: "Bookkeeping", icon: ICONS.books, badge: "", match: (p: string) => p.startsWith("/bookkeeping") },
   { href: "/invoicing", label: "Invoicing", icon: ICONS.invoices, badge: "", match: (p: string) => p.startsWith("/invoicing") },
   { href: "/vat-mtd", label: "VAT & MTD", icon: ICONS.vat, badge: "vat", match: (p: string) => p.startsWith("/vat-mtd") || p.startsWith("/hmrc") },
   { href: "/self-assessment", label: "Self Assessment", icon: ICONS.sa, badge: "", match: (p: string) => p.startsWith("/self-assessment") },
@@ -63,6 +66,7 @@ export default function Chrome({ name, badges = {}, children }: { name: string; 
           const active = n.match(pathname);
           return (
             <Link key={n.href} href={n.href} onClick={() => setMobileOpen(false)} title={n.label}
+              data-tour={"nav-" + n.href.slice(1)}
               className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-semibold transition-all"
               style={active
                 ? { background: "linear-gradient(100deg,rgba(124,108,245,.9),rgba(124,108,245,.55))", color: "#fff", boxShadow: "0 4px 12px rgba(124,108,245,.35)" }
@@ -126,11 +130,16 @@ export default function Chrome({ name, badges = {}, children }: { name: string; 
             <span className="ml-auto rounded-[5px] border border-[#e9e9f1] px-1.5 py-0.5 text-[10px] font-semibold text-[#b3b0c4]">⌘K</span>
           </div>
           <div className="flex-1" />
+          <button title="Take the tour" aria-label="Take the product tour"
+            onClick={() => window.dispatchEvent(new Event("ledgerai:tour"))}
+            className="flex h-10 w-10 flex-none items-center justify-center rounded-[11px] border border-[#e9e9f1] bg-white text-[15px] font-bold text-[#7c6cf5] hover:bg-[#f6f5ff]">
+            ?
+          </button>
           <button className="relative flex h-10 w-10 flex-none items-center justify-center rounded-[11px] border border-[#e9e9f1] bg-white text-[#5a5870]">
             <I d='<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>' size={18} />
             <span className="absolute right-2.5 top-2 h-1.5 w-1.5 rounded-full border-2 border-white bg-[#f04438]" />
           </button>
-          <button onClick={() => setAi(true)} className="flex h-10 flex-none items-center gap-2 rounded-[11px] px-4 text-[13px] font-bold text-white" style={{ background: "linear-gradient(120deg,#7c6cf5,#9b6cf5)", boxShadow: "0 4px 14px rgba(124,108,245,.4)" }}>
+          <button data-tour="copilot" onClick={() => setAi(true)} className="flex h-10 flex-none items-center gap-2 rounded-[11px] px-4 text-[13px] font-bold text-white" style={{ background: "linear-gradient(120deg,#7c6cf5,#9b6cf5)", boxShadow: "0 4px 14px rgba(124,108,245,.4)" }}>
             <I d={ICONS.spark} size={16} color="#fff" /> Copilot
           </button>
         </header>
@@ -139,6 +148,7 @@ export default function Chrome({ name, badges = {}, children }: { name: string; 
       </div>
 
       {ai && <Copilot onClose={() => setAi(false)} />}
+      <AppTour />
     </div>
   );
 }
@@ -171,8 +181,10 @@ function Copilot({ onClose }: { onClose: () => void }) {
         <div className="flex items-center gap-3 px-5 py-4 text-white" style={{ background: "linear-gradient(120deg,#1c1938,#2a2350)" }}>
           <div className="flex h-9 w-9 flex-none items-center justify-center rounded-[11px]" style={{ background: "linear-gradient(135deg,#7c6cf5,#a78bfa)" }}><I d={ICONS.spark} size={18} color="#fff" /></div>
           <div className="flex-1">
-            <div className="text-[15px] font-extrabold">LedgerAI Copilot</div>
-            <div className="flex items-center gap-1.5 text-[11px]" style={{ color: "#b9b4d8" }}><span className="h-1.5 w-1.5 rounded-full bg-[#6ee7b7]" style={{ animation: "pulseDot 2s infinite" }} />Connected to the practice ledger</div>
+            <div className="flex items-center gap-2 text-[15px] font-extrabold">LedgerAI Copilot
+              <span className="rounded bg-amber-400/20 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">MOCK</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-[11px]" style={{ color: "#b9b4d8" }}>Scripted demo replies — not connected to a model or the ledger yet</div>
           </div>
           <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-white/10 text-white">✕</button>
         </div>

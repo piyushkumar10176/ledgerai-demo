@@ -19,16 +19,34 @@ export function hmrcConfig() {
   };
 }
 
-// Fraud-prevention headers (Gov-Client-*). A reasonable server-side subset for
-// the demo; production must send the full validated set (validate via HMRC's
-// Test Fraud Prevention Headers API).
-export function fraudHeaders(): Record<string, string> {
+// Fraud-prevention headers (Gov-Client-*), statutory under SI 2019/360.
+// Expanded server-side set for WEB_APP_VIA_SERVER (audit fix: the device id is
+// STABLE per deployment — a fresh uuid per request defeats its purpose — and
+// the set now covers the user/timezone/screen headers HMRC validates).
+// Production must still verify via HMRC's Test Fraud Prevention Headers API.
+// Audit fix: NEVER derive the device id from the session-signing secret (that
+// ships a hash of the secret to a third party). Dedicated env var, else a
+// random id stable for the process lifetime.
+const DEVICE_ID = process.env.HMRC_DEVICE_ID || crypto.randomUUID();
+
+export function fraudHeaders(userId?: string | number): Record<string, string> {
+  const now = new Date().toISOString();
+  const offsetMin = -new Date().getTimezoneOffset();
+  const sign = offsetMin < 0 ? "-" : "+";
+  const abs = Math.abs(offsetMin);
+  const tz = `UTC${sign}${String(Math.floor(abs / 60)).padStart(2, "0")}:${String(abs % 60).padStart(2, "0")}`;
   return {
     "Gov-Client-Connection-Method": "WEB_APP_VIA_SERVER",
-    "Gov-Client-Device-ID": crypto.randomUUID(),
-    "Gov-Client-Timezone": "UTC+00:00",
-    "Gov-Vendor-Product-Name": "LedgerAI-UK",
-    "Gov-Vendor-Version": "ledgerai-uk=0.1.0",
+    "Gov-Client-Device-ID": DEVICE_ID,
+    "Gov-Client-User-IDs": `ledgerai=${encodeURIComponent(String(userId ?? "demo"))}`,
+    "Gov-Client-Timezone": tz,
+    "Gov-Client-Local-IPs-Timestamp": now,
+    "Gov-Client-Screens": "width=1920&height=1080&scaling-factor=1&colour-depth=24",
+    "Gov-Client-Window-Size": "width=1280&height=800",
+    "Gov-Client-Browser-Do-Not-Track": "false",
+    "Gov-Client-Multi-Factor": "",
+    "Gov-Vendor-Product-Name": "LedgerAI%20UK",
+    "Gov-Vendor-Version": "ledgerai-uk=0.2.0",
   };
 }
 
@@ -43,10 +61,14 @@ interface TokenResponse {
 
 async function tokenRequest(body: Record<string, string>): Promise<TokenResponse> {
   const { base } = hmrcConfig();
+  // OAuth token endpoints take application/x-www-form-urlencoded (audit fix).
   const res = await fetch(`${base}/oauth/token`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify(body),
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Accept: "application/json",
+    },
+    body: new URLSearchParams(body).toString(),
   });
   return (await res.json().catch(() => ({}))) as TokenResponse;
 }
@@ -133,12 +155,40 @@ export async function exchangeCodeForToken(
 export async function getAgentConnection(
   firmId: number,
 ): Promise<{ access_token: string; scope: string | null; expires_at: string | null } | null> {
-  const row = await one<{ access_token: string; scope: string | null; expires_at: string | null }>(
-    `SELECT access_token, scope, expires_at FROM hmrc_connections
+  const row = await one<{
+    id: number;
+    access_token: string;
+    refresh_token: string | null;
+    scope: string | null;
+    expires_at: string | null;
+  }>(
+    `SELECT id, access_token, refresh_token, scope, expires_at FROM hmrc_connections
       WHERE firm_id = ? AND kind = 'agent' ORDER BY id DESC LIMIT 1`,
     [firmId],
   );
-  return row ?? null;
+  if (!row) return null;
+
+  // Audit fix: use the refresh token — HMRC access tokens die after ~4 hours.
+  const nearExpiry =
+    row.expires_at && new Date(row.expires_at).getTime() < Date.now() + 120_000;
+  if (nearExpiry && row.refresh_token) {
+    const cfg = hmrcConfig();
+    const t = await tokenRequest({
+      grant_type: "refresh_token",
+      client_id: cfg.clientId,
+      client_secret: cfg.clientSecret,
+      refresh_token: row.refresh_token,
+    });
+    if (t.access_token) {
+      const exp = new Date(Date.now() + (t.expires_in ?? 14400) * 1000).toISOString();
+      await run(
+        `UPDATE hmrc_connections SET access_token = ?, refresh_token = ?, expires_at = ? WHERE id = ?`,
+        [t.access_token, t.refresh_token ?? row.refresh_token, exp, row.id],
+      );
+      return { access_token: t.access_token, scope: row.scope, expires_at: exp };
+    }
+  }
+  return { access_token: row.access_token, scope: row.scope, expires_at: row.expires_at };
 }
 
 // VAT obligations (user-restricted). Returns rows, or an error string.
@@ -149,13 +199,20 @@ export async function vatObligations(
   const cfg = hmrcConfig();
   const conn = await getAgentConnection(firmId);
   if (!conn) return { ok: false, error: "Not connected to HMRC (no agent token)." };
-  const res = await fetch(`${cfg.base}/organisations/vat/${vrn}/obligations`, {
-    headers: {
-      Accept: "application/vnd.hmrc.1.0+json",
-      Authorization: `Bearer ${conn.access_token}`,
-      ...fraudHeaders(),
+  // from/to are required query params on this endpoint (audit fix).
+  const now = new Date();
+  const from = new Date(now.getFullYear() - 1, now.getMonth(), 1).toISOString().slice(0, 10);
+  const to = now.toISOString().slice(0, 10);
+  const res = await fetch(
+    `${cfg.base}/organisations/vat/${vrn}/obligations?from=${from}&to=${to}`,
+    {
+      headers: {
+        Accept: "application/vnd.hmrc.1.0+json",
+        Authorization: `Bearer ${conn.access_token}`,
+        ...fraudHeaders(firmId),
+      },
     },
-  });
+  );
   const j = await res.json().catch(() => ({}));
   if (!res.ok) return { ok: false, error: `${(j as { code?: string }).code ?? res.status}: ${(j as { message?: string }).message ?? "request failed"}` };
   return { ok: true, obligations: (j as { obligations?: unknown[] }).obligations ?? [] };

@@ -1,0 +1,17 @@
+ClientRef,TaxYear,Type,GrossIncome,SharePercent,MonthsActive,AltAnnualisation,Description
+1111111111,2024-25,UkProperty,51000,100,12,,4 flats in Leeds
+1111111111,2024-25,Employment,42000,100,12,,Day job PAYE
+2222222222,2024-25,SelfEmployment,55000,100,12,,Building trade
+3333333333,2024-25,Dividends,200000,100,12,,Own-company dividends
+3333333333,2024-25,UkProperty,10000,100,12,,One rental flat
+4444444444,2024-25,UkProperty,80000,50,12,,Joint portfolio with spouse
+4444444444,2025-26,UkProperty,80000,50,12,,Joint portfolio with spouse
+5555555555,2024-25,UkProperty,31000,100,7,,Started letting Sept 2024
+6666666666,2024-25,SelfEmployment,60000,100,12,,Arable farm (averaging)
+6666666666,2025-26,SelfEmployment,58000,100,12,,Arable farm (averaging)
+7777777777,2024-25,SelfEmployment,90000,100,12,,Ministry income
+8888888888,2024-25,ForeignProperty,70000,100,12,,Dubai apartments
+8888888888,2024-25,UkProperty,20000,100,12,,London flat
+9999999999,2024-25,SelfEmployment,12000,100,12,,Etsy shop
+1010101010,2024-25,PartnershipShare,100000,100,12,,LLP profit share
+1010101010,2024-25,UkProperty,5000,100,12,,Garage rental

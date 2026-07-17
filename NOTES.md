@@ -54,14 +54,34 @@ Quarterly figures are summed in code (deterministic); **AI never produces a tax 
 | Auth | Keycloak | **Simple session cookie + hashed password** | Per demo brief |
 | Multi-tenancy | Full isolation + RLS | **`firm_id` on every row** (no hardening) | Not painful to harden later |
 
-## What is REAL vs MOCKED (read this before demoing)
-- **REAL:** double-entry ledger (debits = credits enforced), chart of accounts, CSV import, VAT 9-box math (deterministic code), review-queue threshold gating, audit of AI decisions.
-- **MOCKED:** OCR text extraction + AI categorisation (returns sample fields + a computed confidence), HMRC submission (returns a fake receipt). Both are flagged in the UI and are the obvious next real steps.
+## What is REAL vs MOCKED (read this before demoing — updated for the engine merge)
+- **REAL:**
+  - **Mandation engine** (`lib/engine/`) — SI 2026/336 rules ported from the canonical
+    .NET build: gross qualifying income with the full exclusion list, joint-property
+    shares, annualisation, 8 automatic exemptions, deferrals, waves keyed to look-back
+    years, MTD-year exit rule, permanent cessation — **verified by a 26-case vitest
+    legal suite** (`npm test`). Statuses in the UI come from this engine, incl. seed data.
+  - **Client-book CSV import** (`/mandation`) — hardened parser (£-formatted money,
+    % shares, spaced NINOs, mid-field quotes, ambiguous-name detection; bad rows get
+    line-numbered errors, never guesses).
+  - Cumulative quarterly computation (deterministic YTD, supersede-on-resubmit),
+    consolidated < £90k per source **with residential finance costs always separate**,
+    review-queue threshold gating, AI-decision audit log, magic-link upload page
+    (expiry enforced), single-entry digital records, HMRC sandbox app token + OAuth
+    journey (state-validated, form-encoded, refresh-token aware).
+- **MOCKED (flagged in the UI):** AI categorisation (deterministic sample + confidence),
+  HMRC quarterly submission (fake receipt — no ITSA API call), in-year tax estimate,
+  Copilot chat (scripted replies, MOCK badge). ITSA-status reconciliation with HMRC is
+  the production step (the .NET build's gateway already calls the real API surface).
 
 ## Deliberately NOT built (out of demo scope)
-Open Banking / live bank feeds, real HMRC OAuth + fraud-prevention headers, Companies House lookup (manual client entry instead), Keycloak, full tenant-isolation hardening, payroll, corporation tax, MTD Income Tax quarterly updates, client portal.
+Open Banking / live bank feeds, Companies House lookup, Keycloak, Postgres row-level
+security (the production .NET build at `~/ledgerai` has it; this demo scopes every
+query by `firm_id`), payroll, corporation tax, final declaration, client portal
+beyond magic links.
 
-> Note: the FRD (VAT-first) and PRD v2 (Income-Tax-first) disagree on direction. This demo follows the brief = **VAT 9-box**.
+> Direction: PRD v2 / law-driven plan v3 — **MTD Income Tax first**. The earlier
+> VAT 9-box + double-entry ledger build is preserved in git history (pre-pivot).
 
 ---
 

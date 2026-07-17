@@ -42,6 +42,11 @@ export async function resolveMagicLink(
     [token],
   );
   if (!row) return null;
+  // Enforce the lifetime (security audit fix): an expired link is dead. Links
+  // stay multi-use WITHIN the window (clients upload several times), so used_at
+  // is an audit stamp, not a lock.
+  if (row.expires_at && new Date(row.expires_at).getTime() < Date.now())
+    return null;
   return {
     clientId: row.client_id,
     firmId: row.firm_id,
@@ -51,8 +56,20 @@ export async function resolveMagicLink(
   };
 }
 
+/** Revoke every live link for a client (e.g. sent to the wrong number).
+ *  Wired to POST /api/clients/[id]/revoke-links. */
+export async function revokeMagicLinks(firmId: number, clientId: number): Promise<void> {
+  await run(
+    `UPDATE magic_links SET expires_at = ? WHERE firm_id = ? AND client_id = ?`,
+    [new Date().toISOString(), firmId, clientId],
+  );
+}
+
 export async function markMagicLinkUsed(token: string): Promise<void> {
-  await run(`UPDATE magic_links SET used_at = datetime('now') WHERE token = ?`, [
+  // ISO-with-Z (audit fix): datetime('now') has no timezone marker and parses
+  // as LOCAL time in JS — hours of drift on servers west of UTC.
+  await run(`UPDATE magic_links SET used_at = ? WHERE token = ?`, [
+    new Date().toISOString(),
     token,
   ]);
 }
