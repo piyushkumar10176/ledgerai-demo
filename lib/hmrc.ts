@@ -167,6 +167,52 @@ export async function vatObligations(
   return { ok: true, obligations: (j as { obligations?: VatObligation[] }).obligations ?? [] };
 }
 
+// --- MTD Income Tax (ITSA) ---
+
+export interface ItsaBusiness { businessId: string; typeOfBusiness: string; tradingName?: string }
+
+// Real Business Details (MTD) — lists the taxpayer's businesses (gives businessId).
+export async function itsaBusinessList(
+  firmId: number,
+  nino: string,
+): Promise<{ ok: boolean; businesses?: ItsaBusiness[]; error?: string }> {
+  const cfg = hmrcConfig();
+  const conn = await getAgentConnection(firmId);
+  if (!conn) return { ok: false, error: "Not connected to HMRC." };
+  const res = await fetch(`${cfg.base}/individuals/business/details/${nino}/list`, {
+    headers: {
+      Accept: "application/vnd.hmrc.1.0+json",
+      Authorization: `Bearer ${conn.access_token}`,
+      ...fraudHeaders(),
+    },
+  });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) return { ok: false, error: `${(j as { code?: string }).code ?? res.status}: ${(j as { message?: string }).message ?? "request failed"}` };
+  const list = ((j as { listOfBusinesses?: ItsaBusiness[] }).listOfBusinesses) ?? ((j as { businesses?: ItsaBusiness[] }).businesses) ?? [];
+  return { ok: true, businesses: list };
+}
+
+// Real ITSA obligations (income-and-expenditure) for the taxpayer.
+export async function itsaObligations(
+  firmId: number,
+  nino: string,
+): Promise<{ ok: boolean; obligations?: unknown[]; error?: string }> {
+  const cfg = hmrcConfig();
+  const conn = await getAgentConnection(firmId);
+  if (!conn) return { ok: false, error: "Not connected to HMRC." };
+  const res = await fetch(`${cfg.base}/obligations/details/${nino}/income-and-expenditure?from=2026-04-06&to=2027-04-05`, {
+    headers: {
+      Accept: "application/vnd.hmrc.2.0+json",
+      Authorization: `Bearer ${conn.access_token}`,
+      "Gov-Test-Scenario": "QUARTERLY_NONE_MET",
+      ...fraudHeaders(),
+    },
+  });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) return { ok: false, error: `${(j as { code?: string }).code ?? res.status}: ${(j as { message?: string }).message ?? "request failed"}` };
+  return { ok: true, obligations: (j as { obligations?: unknown[] }).obligations ?? [] };
+}
+
 // Submit a real MTD VAT return (9 boxes) to HMRC. Boxes are in PENNIES;
 // HMRC wants pounds (5 VAT boxes 2dp, 4 value boxes whole pounds), finalised.
 export async function submitVatReturn(
