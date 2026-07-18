@@ -35,10 +35,11 @@ export default async function HmrcPage({
       <div className="mt-4 card p-5">
         <h2 className="font-semibold">Connect an agent (VAT/ITSA)</h2>
         <p className="mt-1 text-sm text-stone-500">Starts the OAuth authorization-code flow against the sandbox.</p>
-        <a href="/api/hmrc/connect?scope=read:vat+write:vat"
+        <a href="/api/hmrc/connect?scope=read:vat+write:vat+read:self-assessment+write:self-assessment"
           className="mt-3 inline-block rounded-md bg-brand-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-700">
-          Connect to HMRC (sandbox)
+          Connect to HMRC (VAT + Income Tax)
         </a>
+        <p className="mt-2 text-xs text-[#8a879a]">Reconnect to grant the added Income-Tax scopes. Current scope: read:vat write:vat only.</p>
         {process.env.HMRC_TEST_USER_ID && (
           <div className="mt-4 rounded-lg bg-stone-50 p-4 text-sm">
             <div className="text-xs font-semibold uppercase tracking-wide text-stone-500">Authorise with this sandbox test user</div>

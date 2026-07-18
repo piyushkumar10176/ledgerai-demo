@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   if (!hmrcConfig().configured)
     return NextResponse.redirect(new URL("/hmrc?error=not_configured", req.url));
 
-  const scope = req.nextUrl.searchParams.get("scope") || "read:vat write:vat";
+  const scope = req.nextUrl.searchParams.get("scope") || "read:vat write:vat read:self-assessment write:self-assessment";
   const state = crypto.randomUUID();
   return NextResponse.redirect(buildAuthorizeUrl(state, scope));
 }
