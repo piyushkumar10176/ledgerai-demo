@@ -13,7 +13,7 @@ export async function PATCH(
   if (!client) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const b = await req.json();
   const fields: Record<string, string> = {};
-  for (const k of ["name", "nino", "utr", "phone", "vrn"]) if (b[k] !== undefined) fields[k] = b[k];
+  for (const k of ["name", "nino", "utr", "phone", "vrn", "dob"]) if (b[k] !== undefined) fields[k] = b[k];
   await updateClientInfo(session.firmId, client.id, fields);
   return NextResponse.json({ ok: true });
 }

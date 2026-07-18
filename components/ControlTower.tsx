@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import ChaseButton from "./ChaseButton";
 
 type Status = "filed" | "ready" | "missing";
 interface Obligation {
@@ -39,7 +40,6 @@ export default function ControlTower({
 }) {
   const router = useRouter();
   const [filter, setFilter] = useState<"all" | Status>("all");
-  const [chased, setChased] = useState<Record<number, boolean>>({});
   const [busy, setBusy] = useState(false);
 
   const counts = {
@@ -156,12 +156,8 @@ export default function ControlTower({
                   <td className="px-4 py-3 text-right font-medium tabular-nums">{gbp(o.netProfit)}</td>
                   <td className="px-4 py-3 text-right">
                     {o.status === "missing" ? (
-                      chased[o.clientId] ? (
-                        <span className="text-xs text-green-600">Reminder sent ✓</span>
-                      ) : (
-                        <button onClick={() => setChased((c) => ({ ...c, [o.clientId]: true }))}
-                          className="rounded-md border border-red-300 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50">Chase</button>
-                      )
+                      <ChaseButton clientId={o.clientId} periodKey={periodKeyFrom(period)}
+                        className="rounded-md border border-red-300 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50" />
                     ) : o.status === "ready" ? (
                       <Link href={`/clients/${o.clientId}/sources/${o.sourceId}/file`}
                         className="rounded-md bg-brand-600 px-3 py-1 text-xs font-medium text-white hover:bg-brand-700">Review &amp; file →</Link>

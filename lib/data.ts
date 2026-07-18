@@ -1,4 +1,5 @@
 import { one, many, run } from "./db";
+import { logAudit } from "./audit";
 import type { SourceType } from "./hmrc-categories";
 
 export interface Client {
@@ -58,9 +59,9 @@ export async function createClient(
 export async function updateClientInfo(
   firmId: number,
   id: number,
-  f: Partial<{ name: string; nino: string; utr: string; phone: string; vrn: string }>,
+  f: Partial<{ name: string; nino: string; utr: string; phone: string; vrn: string; dob: string }>,
 ): Promise<void> {
-  const cols: [keyof typeof f, string][] = [["name", "name"], ["nino", "nino"], ["utr", "utr"], ["phone", "phone"], ["vrn", "vrn"]];
+  const cols: [keyof typeof f, string][] = [["name", "name"], ["nino", "nino"], ["utr", "utr"], ["phone", "phone"], ["vrn", "vrn"], ["dob", "dob"]];
   const sets: string[] = [];
   const args: (string | number)[] = [];
   for (const [k, col] of cols) {
@@ -69,6 +70,7 @@ export async function updateClientInfo(
   if (sets.length === 0) return;
   args.push(id, firmId);
   await run(`UPDATE clients SET ${sets.join(", ")} WHERE id = ? AND firm_id = ?`, args);
+  await logAudit(firmId, "client.edited", "client", id, Object.keys(f).join(", "));
 }
 
 export interface IncomeSource {

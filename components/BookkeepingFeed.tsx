@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 interface Row {
   id: number; client_name: string; business_name: string; txn_date: string;
   description: string; direction: string; category: string | null; categoryLabel: string;
-  amount: number; status: string; confidence: number | null;
+  amount: number; status: string; confidence: number | null; dup?: boolean;
 }
 
 function gbp(p: number, dir: string) {
@@ -51,7 +51,10 @@ export default function BookkeepingFeed({ rows }: { rows: Row[] }) {
               <tr key={r.id} className="border-b border-[#f4f4f9]">
                 <td className="mono px-5 py-3 text-[11.5px] text-[#9995ab]">{shortDate(r.txn_date)}</td>
                 <td className="px-5 py-3">
-                  <div className="text-[13px] font-semibold text-[#16151c]">{r.description}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[13px] font-semibold text-[#16151c]">{r.description}</span>
+                    {r.dup && <span className="chip" style={{ background: "#fef0c7", color: "#b54708" }}>⚠ duplicate</span>}
+                  </div>
                   <div className="text-[11px] text-[#a6a3b6]">{r.client_name} · {r.business_name}</div>
                 </td>
                 <td className="px-5 py-3">

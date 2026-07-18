@@ -128,6 +128,43 @@ CREATE TABLE IF NOT EXISTS client_services (
   PRIMARY KEY (client_id, service)
 );
 
+-- Learning loop: supplier -> category rules (deterministic beats re-inference).
+CREATE TABLE IF NOT EXISTS category_rules (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  firm_id INTEGER NOT NULL REFERENCES firms(id),
+  client_id INTEGER REFERENCES clients(id),   -- null = firm-wide rule
+  pattern TEXT NOT NULL,                       -- lowercase supplier/keyword
+  category TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_rules_firm ON category_rules(firm_id);
+
+-- Automated chasing schedule (per client per period).
+CREATE TABLE IF NOT EXISTS chase_schedules (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  firm_id INTEGER NOT NULL REFERENCES firms(id),
+  client_id INTEGER NOT NULL REFERENCES clients(id),
+  period_key TEXT NOT NULL,
+  stage INTEGER NOT NULL DEFAULT 0,            -- 0=none,1=reminder,2=chase,3=final
+  status TEXT NOT NULL DEFAULT 'pending',      -- pending | sent | resolved
+  last_sent TEXT,
+  channel TEXT,                                -- sms | email (mock)
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Full audit trail (actor, action, before/after) for compliance.
+CREATE TABLE IF NOT EXISTS audit_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  firm_id INTEGER NOT NULL REFERENCES firms(id),
+  user_id INTEGER REFERENCES users(id),
+  action TEXT NOT NULL,
+  entity TEXT,
+  entity_id INTEGER,
+  detail TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_audit_firm ON audit_events(firm_id);
+
 -- Practice-wide invoicing.
 CREATE TABLE IF NOT EXISTS invoices (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

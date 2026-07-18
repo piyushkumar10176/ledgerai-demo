@@ -3,6 +3,7 @@ import { many, one, run } from "./db";
 import { getIncomeSource } from "./data";
 import { computeQuarterlyUpdate } from "./quarterly";
 import { quarterByKey } from "./periods";
+import { logAudit } from "./audit";
 
 export interface StoredQuarterly {
   id: number;
@@ -59,6 +60,7 @@ export async function submitQuarterlyUpdate(
       JSON.stringify(receipt), receipt.processingDate,
     ],
   );
+  await logAudit(firmId, "quarterly.submitted", "quarterly_update", r.lastId, `${periodKey} net £${(u.netProfit / 100).toFixed(2)} · ref ${receipt.transactionReference}`);
   return { id: r.lastId, receipt };
 }
 

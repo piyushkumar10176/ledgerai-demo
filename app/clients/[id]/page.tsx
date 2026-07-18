@@ -40,17 +40,7 @@ export default async function ClientOverview({
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {client.vrn && (
-            <a
-              href={`https://test-www.tax.service.gov.uk`}
-              target="_blank"
-              rel="noreferrer"
-              className="btn-ghost"
-              title="Open HMRC online services (sandbox)"
-            >
-              ↗ HMRC online
-            </a>
-          )}
+          <a href={`/api/export/year-end/${clientId}`} className="btn-ghost" title="Download year-end working papers (CSV)">⬇ Year-end pack</a>
           <Link href="/hmrc" className="btn-primary">🏛️ HMRC</Link>
         </div>
       </div>
@@ -60,7 +50,7 @@ export default async function ClientOverview({
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <ClientEditForm
           clientId={clientId}
-          initial={{ name: client.name, nino: client.nino ?? "", utr: client.utr ?? "", phone: client.phone ?? "", vrn: client.vrn ?? "" }}
+          initial={{ name: client.name, nino: client.nino ?? "", utr: client.utr ?? "", phone: client.phone ?? "", vrn: client.vrn ?? "", dob: client.dob ?? "" }}
         />
         <div className="card p-5">
           <h2 className="text-xs font-bold uppercase tracking-wide text-[#8a879a]">Collect data · zero client login</h2>

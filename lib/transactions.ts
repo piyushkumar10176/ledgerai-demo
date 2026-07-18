@@ -5,6 +5,8 @@ import {
   runMockReceiptOcr,
   CONFIDENCE_THRESHOLD,
 } from "./categorise-mock";
+import { applyRule, saveRule } from "./rules";
+import { logAudit } from "./audit";
 import type { SourceType } from "./hmrc-categories";
 import type { ParsedBankRow } from "./csv";
 
@@ -31,8 +33,12 @@ export async function addTransaction(
   sourceType: SourceType,
   t: { date: string; description: string; signedAmount: number; source: string; provenance?: string },
 ): Promise<number> {
-  const suggestion = suggestCategory(t.description, sourceType, t.signedAmount);
   const direction = t.signedAmount > 0 ? "income" : "expense";
+  // Learning loop: a learned rule for this supplier beats fresh AI inference.
+  const learned = await applyRule(firmId, clientId, t.description);
+  const suggestion = learned
+    ? { category: learned, direction, confidence: 1.0 }
+    : suggestCategory(t.description, sourceType, t.signedAmount);
   const amount = Math.abs(t.signedAmount);
   const status = suggestion.confidence >= CONFIDENCE_THRESHOLD ? "auto" : "review";
 
@@ -55,7 +61,7 @@ export async function addTransaction(
         suggested_category, outcome)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [
-      firmId, txnId, "mock-categoriser/v1", t.description,
+      firmId, txnId, learned ? "learned-rule/v1" : "mock-categoriser/v1", t.description,
       JSON.stringify(suggestion), suggestion.confidence, suggestion.category,
       status === "auto" ? "auto" : "queued_for_review",
     ],
@@ -138,8 +144,8 @@ export async function confirmTransaction(
   txnId: number,
   overrideCategory?: string,
 ): Promise<void> {
-  const t = await one<{ id: number; category: string | null }>(
-    `SELECT id, category FROM transactions WHERE id = ? AND firm_id = ?`,
+  const t = await one<{ id: number; client_id: number; description: string; category: string | null }>(
+    `SELECT id, client_id, description, category FROM transactions WHERE id = ? AND firm_id = ?`,
     [txnId, firmId],
   );
   if (!t) throw new Error("Transaction not found");
@@ -152,6 +158,9 @@ export async function confirmTransaction(
     overrideCategory ? "overridden" : "confirmed",
     txnId,
   ]);
+  // Learn: a human override teaches a supplier→category rule for next time.
+  if (overrideCategory) await saveRule(firmId, t.client_id, t.description, overrideCategory);
+  await logAudit(firmId, overrideCategory ? "txn.recategorised" : "txn.confirmed", "transaction", txnId, category ?? undefined);
 }
 
 // Manually add an entry (accountant-entered, auto-confirmed).
@@ -187,12 +196,14 @@ export async function updateTransaction(
   if (sets.length === 0) return;
   args.push(id, firmId);
   await run(`UPDATE transactions SET ${sets.join(", ")} WHERE id = ? AND firm_id = ?`, args);
+  await logAudit(firmId, "txn.edited", "transaction", id);
 }
 
 // Remove an entry (and its AI-decision audit rows).
 export async function deleteTransaction(firmId: number, id: number): Promise<void> {
   await run(`DELETE FROM ai_decisions WHERE transaction_id = ? AND firm_id = ?`, [id, firmId]);
   await run(`DELETE FROM transactions WHERE id = ? AND firm_id = ?`, [id, firmId]);
+  await logAudit(firmId, "txn.deleted", "transaction", id);
 }
 
 export async function rejectTransaction(

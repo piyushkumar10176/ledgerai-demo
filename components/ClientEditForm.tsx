@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-interface Fields { name: string; nino: string; utr: string; phone: string; vrn: string }
+interface Fields { name: string; nino: string; utr: string; phone: string; vrn: string; dob: string }
 
 export default function ClientEditForm({ clientId, initial }: { clientId: number; initial: Fields }) {
   const router = useRouter();
@@ -29,6 +29,7 @@ export default function ClientEditForm({ clientId, initial }: { clientId: number
           <Row k="Name" v={initial.name} />
           <Row k="NINO" v={initial.nino || "—"} />
           <Row k="UTR" v={initial.utr || "—"} />
+          <Row k="Date of birth" v={initial.dob || "—"} />
           <Row k="VRN" v={initial.vrn || "—"} />
           <Row k="Mobile" v={initial.phone || "—"} />
         </dl>
@@ -43,6 +44,7 @@ export default function ClientEditForm({ clientId, initial }: { clientId: number
         <Field label="Name" v={f.name} on={(v) => set("name", v)} />
         <Field label="NINO" v={f.nino} on={(v) => set("nino", v)} />
         <Field label="UTR" v={f.utr} on={(v) => set("utr", v)} />
+        <Field label="Date of birth (YYYY-MM-DD)" v={f.dob} on={(v) => set("dob", v)} />
         <Field label="VRN" v={f.vrn} on={(v) => set("vrn", v)} />
         <Field label="Mobile" v={f.phone} on={(v) => set("phone", v)} />
       </div>

@@ -51,6 +51,7 @@ export default async function Dashboard() {
           <p className="text-[13px] text-[#8a879a]">MTD Income Tax · {TAX_YEAR} · {CURRENT_QUARTER.label} · deadline {CURRENT_QUARTER.deadline} ({days}d)</p>
         </div>
         <div className="flex items-center gap-2">
+          <Link href="/audit" className="btn-ghost">Audit log</Link>
           <form action="/api/dev/seed-samples" method="post"><button className="btn-ghost">Load sample</button></form>
           <form action="/api/dev/reset" method="post"><button className="btn-ghost">Reset</button></form>
           <AddClientForm />
