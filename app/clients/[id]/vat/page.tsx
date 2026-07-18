@@ -106,10 +106,31 @@ export default async function VatPage({ params }: { params: Promise<{ id: string
               {conn ? "Submit to HMRC" : "Connect & file via MTD"}
             </Link>
             <div className="mt-2.5 text-center text-[11px] text-[#a6a3b6]">
-              {client.vrn ? <>VRN {client.vrn} · </> : ""}{conn ? "Filed via the real MTD VAT API" : "Connect an agent to file for real"}
+              {client.vrn ? <>VRN {client.vrn} · </> : ""}{conn ? "Live via the real MTD VAT API" : "Connect an agent to file for real"}
             </div>
-            {vatObs && !vatObs.ok && <div className="mt-2 rounded-lg bg-[#fff4e5] px-3 py-2 text-[11px] text-[#b54708]">{vatObs.error}</div>}
           </div>
+
+          {client.vrn && (
+            <div className="card p-[18px]">
+              <div className="flex items-center justify-between">
+                <div className="text-[12.5px] font-bold uppercase tracking-wide text-[#8a879a]">Live HMRC obligations</div>
+                <span className="chip" style={{ color: "#12805c", background: "#e6f9f0" }}>real API</span>
+              </div>
+              {!vatObs ? null : vatObs.ok ? (
+                <ul className="mt-2 space-y-1.5 text-[12.5px]">
+                  {vatObs.obligations!.map((o, i) => (
+                    <li key={i} className="flex items-center justify-between border-t border-[#f4f4f9] py-1.5">
+                      <span className="mono text-[#5a5870]">{o.start} → {o.end}<span className="text-[#a6a3b6]"> · due {o.due}</span></span>
+                      <span className="chip" style={o.status === "F" ? { color: "#12805c", background: "#e6f9f0" } : { color: "#b54708", background: "#fef0c7" }}>{o.status === "F" ? "Fulfilled" : "Open"}</span>
+                    </li>
+                  ))}
+                  {vatObs.obligations!.length === 0 && <li className="py-2 text-[#a6a3b6]">No obligations returned for this period.</li>}
+                </ul>
+              ) : (
+                <div className="mt-2 rounded-lg bg-[#fff4e5] px-3 py-2 text-[11.5px] text-[#b54708]">{vatObs.error}</div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </main>

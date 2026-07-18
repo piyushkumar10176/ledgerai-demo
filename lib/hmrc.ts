@@ -142,21 +142,27 @@ export async function getAgentConnection(
 }
 
 // VAT obligations (user-restricted). Returns rows, or an error string.
+export interface VatObligation { start: string; end: string; due: string; status: string; periodKey?: string; received?: string }
+
 export async function vatObligations(
   firmId: number,
   vrn: string,
-): Promise<{ ok: boolean; obligations?: unknown[]; error?: string }> {
+): Promise<{ ok: boolean; obligations?: VatObligation[]; error?: string }> {
   const cfg = hmrcConfig();
   const conn = await getAgentConnection(firmId);
   if (!conn) return { ok: false, error: "Not connected to HMRC (no agent token)." };
-  const res = await fetch(`${cfg.base}/organisations/vat/${vrn}/obligations`, {
+  // The MTD VAT obligations endpoint requires a from/to window (≤ 366 days).
+  const from = "2026-01-01", to = "2026-12-31";
+  const res = await fetch(`${cfg.base}/organisations/vat/${vrn}/obligations?from=${from}&to=${to}`, {
     headers: {
       Accept: "application/vnd.hmrc.1.0+json",
       Authorization: `Bearer ${conn.access_token}`,
+      // Sandbox test data (returns quarterly obligations for the test VRN).
+      "Gov-Test-Scenario": "QUARTERLY_NONE_MET",
       ...fraudHeaders(),
     },
   });
   const j = await res.json().catch(() => ({}));
   if (!res.ok) return { ok: false, error: `${(j as { code?: string }).code ?? res.status}: ${(j as { message?: string }).message ?? "request failed"}` };
-  return { ok: true, obligations: (j as { obligations?: unknown[] }).obligations ?? [] };
+  return { ok: true, obligations: (j as { obligations?: VatObligation[] }).obligations ?? [] };
 }
