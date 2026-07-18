@@ -8,6 +8,7 @@ import { getAgentConnection, vatObligations } from "@/lib/hmrc";
 import { formatGBP } from "@/lib/money";
 import ServiceTabs from "@/components/ServiceTabs";
 import CopilotButton from "@/components/CopilotButton";
+import VatSubmitReal from "@/components/VatSubmitReal";
 
 const LABELS: [string, string][] = [
   ["1", "VAT due on sales and other outputs"], ["2", "VAT due on acquisitions from EU"],
@@ -101,10 +102,7 @@ export default async function VatPage({ params }: { params: Promise<{ id: string
           <div className="card p-[18px]">
             <div className="text-[12.5px] font-semibold text-[#8a879a]">Net VAT due to HMRC</div>
             <div className="mono my-1.5 mb-3.5 text-[30px] font-extrabold" style={{ letterSpacing: "-.02em" }}>{formatGBP(b["5"])}</div>
-            <Link href="/hmrc" className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-[14px] font-bold text-white" style={{ background: "#16b364", boxShadow: "0 4px 14px rgba(22,179,100,.35)" }}>
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4Z" /></svg>
-              {conn ? "Submit to HMRC" : "Connect & file via MTD"}
-            </Link>
+            <VatSubmitReal clientId={clientId} connected={!!conn && !!client.vrn} />
             <div className="mt-2.5 text-center text-[11px] text-[#a6a3b6]">
               {client.vrn ? <>VRN {client.vrn} · </> : ""}{conn ? "Live via the real MTD VAT API" : "Connect an agent to file for real"}
             </div>
