@@ -9,6 +9,7 @@ export default function VatSubmitReal({ clientId, connected }: { clientId: numbe
   const [busy, setBusy] = useState(false);
   const [receipt, setReceipt] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState("");
+  const [alreadyFiled, setAlreadyFiled] = useState(false);
 
   const green: React.CSSProperties = { background: "#16b364", boxShadow: "0 4px 14px rgba(22,179,100,.35)" };
 
@@ -24,8 +25,17 @@ export default function VatSubmitReal({ clientId, connected }: { clientId: numbe
     const res = await fetch("/api/hmrc/vat-submit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clientId }) });
     const j = await res.json();
     setBusy(false);
-    if (res.ok) { setReceipt(j.receipt); router.refresh(); } else setError(j.error || "Submit failed");
+    if (res.ok) { setReceipt(j.receipt); router.refresh(); }
+    else if (j.allFiled) setAlreadyFiled(true);
+    else setError(j.error || "Submit failed");
   }
+
+  if (alreadyFiled)
+    return (
+      <div className="rounded-xl border border-green-300 bg-green-50 p-4 text-[13px] font-bold text-green-800">
+        ✓ Already filed to HMRC — every open period for this VRN has been submitted (sandbox).
+      </div>
+    );
 
   if (receipt)
     return (

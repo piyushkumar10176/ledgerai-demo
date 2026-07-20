@@ -220,7 +220,7 @@ export async function submitVatReturn(
   vrn: string,
   periodKey: string,
   boxesPennies: { box1: number; box2: number; box3: number; box4: number; box5: number; box6: number; box7: number; box8: number; box9: number },
-): Promise<{ ok: boolean; receipt?: Record<string, unknown>; error?: string }> {
+): Promise<{ ok: boolean; receipt?: Record<string, unknown>; error?: string; code?: string }> {
   const cfg = hmrcConfig();
   const conn = await getAgentConnection(firmId);
   if (!conn) return { ok: false, error: "Not connected to HMRC." };
@@ -250,7 +250,11 @@ export async function submitVatReturn(
     },
     body: JSON.stringify(body),
   });
-  const j = await res.json().catch(() => ({}));
-  if (!res.ok) return { ok: false, error: `${(j as { code?: string }).code ?? res.status}: ${(j as { message?: string }).message ?? "submit failed"}` };
+  const j = (await res.json().catch(() => ({}))) as { code?: string; message?: string; errors?: { code?: string; message?: string }[] };
+  if (!res.ok) {
+    const nested = j.errors?.[0]?.code;
+    const code = nested ?? j.code ?? String(res.status);
+    return { ok: false, code, error: `${code}: ${j.errors?.[0]?.message ?? j.message ?? "submit failed"}` };
+  }
   return { ok: true, receipt: j as Record<string, unknown> };
 }
