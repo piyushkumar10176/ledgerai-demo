@@ -6,6 +6,7 @@ import { getClientServices } from "@/lib/services";
 import { firmObligations } from "@/lib/obligations";
 import { CURRENT_QUARTER } from "@/lib/periods";
 import AddClientForm from "@/components/AddClientForm";
+import ImportClients from "@/components/ImportClients";
 
 const AV = [
   ["#eef0ff", "#6c5ce7"], ["#fff4e5", "#f79009"], ["#e6f9f0", "#12805c"],
@@ -83,6 +84,7 @@ export default async function ClientsPage({
           ))}
         </div>
         <div className="flex-1" />
+        <ImportClients />
         <AddClientForm />
       </div>
 

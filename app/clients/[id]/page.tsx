@@ -40,7 +40,8 @@ export default async function ClientOverview({
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <a href={`/api/export/year-end/${clientId}`} className="btn-ghost" title="Download year-end working papers (CSV)">⬇ Year-end pack</a>
+          <Link href={`/clients/${clientId}/year-end`} className="btn-ghost">📅 Year end</Link>
+          <a href={`/api/export/year-end/${clientId}`} className="btn-ghost" title="Download year-end working papers (CSV)">⬇ Pack</a>
           <Link href="/hmrc" className="btn-primary">🏛️ HMRC</Link>
         </div>
       </div>

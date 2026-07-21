@@ -6,6 +6,7 @@ import {
   CONFIDENCE_THRESHOLD,
 } from "./categorise-mock";
 import { applyRule, saveRule } from "./rules";
+import { aiCategorise, aiEnabled } from "./ai";
 import { logAudit } from "./audit";
 import type { SourceType } from "./hmrc-categories";
 import type { ParsedBankRow } from "./csv";
@@ -33,12 +34,23 @@ export async function addTransaction(
   sourceType: SourceType,
   t: { date: string; description: string; signedAmount: number; source: string; provenance?: string },
 ): Promise<number> {
-  const direction = t.signedAmount > 0 ? "income" : "expense";
-  // Learning loop: a learned rule for this supplier beats fresh AI inference.
+  const direction: "income" | "expense" = t.signedAmount > 0 ? "income" : "expense";
+  // Precedence: learned rule → real Claude (if configured) → deterministic mock.
   const learned = await applyRule(firmId, clientId, t.description);
-  const suggestion = learned
-    ? { category: learned, direction, confidence: 1.0 }
-    : suggestCategory(t.description, sourceType, t.signedAmount);
+  let suggestion: { category: string; direction: string; confidence: number };
+  let model = "mock-categoriser/v1";
+  if (learned) {
+    suggestion = { category: learned, direction, confidence: 1.0 };
+    model = "learned-rule/v1";
+  } else {
+    const ai = aiEnabled() ? await aiCategorise(t.description, sourceType, direction) : null;
+    if (ai) {
+      suggestion = { category: ai.category, direction, confidence: ai.confidence };
+      model = "claude/v1";
+    } else {
+      suggestion = suggestCategory(t.description, sourceType, t.signedAmount);
+    }
+  }
   const amount = Math.abs(t.signedAmount);
   const status = suggestion.confidence >= CONFIDENCE_THRESHOLD ? "auto" : "review";
 
@@ -61,7 +73,7 @@ export async function addTransaction(
         suggested_category, outcome)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [
-      firmId, txnId, learned ? "learned-rule/v1" : "mock-categoriser/v1", t.description,
+      firmId, txnId, model, t.description,
       JSON.stringify(suggestion), suggestion.confidence, suggestion.category,
       status === "auto" ? "auto" : "queued_for_review",
     ],

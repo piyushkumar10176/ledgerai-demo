@@ -128,6 +128,38 @@ CREATE TABLE IF NOT EXISTS client_services (
   PRIMARY KEY (client_id, service)
 );
 
+-- Layer 3 (Phase 3): year-end other income + adjustments for the final declaration.
+CREATE TABLE IF NOT EXISTS year_end_data (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  firm_id INTEGER NOT NULL REFERENCES firms(id),
+  client_id INTEGER NOT NULL REFERENCES clients(id),
+  tax_year TEXT NOT NULL,
+  employment_income INTEGER NOT NULL DEFAULT 0,
+  employment_tax_paid INTEGER NOT NULL DEFAULT 0,
+  dividends INTEGER NOT NULL DEFAULT 0,
+  interest INTEGER NOT NULL DEFAULT 0,
+  pension_income INTEGER NOT NULL DEFAULT 0,
+  pension_contributions INTEGER NOT NULL DEFAULT 0,
+  gift_aid INTEGER NOT NULL DEFAULT 0,
+  student_loan_plan TEXT,
+  hicbc INTEGER NOT NULL DEFAULT 0,
+  capital_allowances INTEGER NOT NULL DEFAULT 0,
+  disallowables INTEGER NOT NULL DEFAULT 0,
+  declared_at TEXT,
+  UNIQUE(client_id, tax_year)
+);
+
+-- Client approval of quarterly figures via magic link (Phase 2).
+CREATE TABLE IF NOT EXISTS approvals (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  firm_id INTEGER NOT NULL REFERENCES firms(id),
+  client_id INTEGER NOT NULL REFERENCES clients(id),
+  period_key TEXT NOT NULL,
+  approved_at TEXT,
+  approved_via TEXT,
+  UNIQUE(client_id, period_key)
+);
+
 -- Learning loop: supplier -> category rules (deterministic beats re-inference).
 CREATE TABLE IF NOT EXISTS category_rules (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -1,5 +1,8 @@
 import { resolveMagicLink } from "@/lib/magiclink";
 import MagicUpload from "@/components/MagicUpload";
+import ClientApprove from "@/components/ClientApprove";
+import { getApproval } from "@/lib/approvals";
+import { CURRENT_QUARTER } from "@/lib/periods";
 
 // PUBLIC page — no login. The token is the authorisation.
 export default async function MagicLinkPage({
@@ -18,6 +21,8 @@ export default async function MagicLinkPage({
       </main>
     );
 
+  const approval = await getApproval(target.clientId, CURRENT_QUARTER.key);
+
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6">
       <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
@@ -28,6 +33,13 @@ export default async function MagicLinkPage({
           Upload below — <b>no login, no app, no password</b>. Takes 20 seconds.
         </p>
         <div className="mt-5"><MagicUpload token={token} /></div>
+        <div className="mt-5 border-t border-stone-200 pt-5">
+          <div className="text-xs font-medium uppercase tracking-wide text-brand-600">Sign off</div>
+          <p className="mb-3 mt-1 text-sm text-stone-600">
+            Once you&apos;re happy your records are complete, approve the quarter so your accountant can submit it to HMRC.
+          </p>
+          <ClientApprove token={token} periodKey={CURRENT_QUARTER.key} approved={!!approval} />
+        </div>
         <p className="mt-4 text-center text-[11px] text-stone-400">
           Demo magic link · uploads are categorised automatically by your accountant&apos;s AI.
         </p>
